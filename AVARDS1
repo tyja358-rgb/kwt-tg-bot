@@ -4,59 +4,59 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Папка для загруженных файлов
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+# Папка для загрузок
+UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Простая "база данных" в памяти для голосования
-photos_db = []
+# Хранилище фото (для теста, в проде лучше база данных)
+photos = []
+photo_id_counter = 1
 
-# Главная страница
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Загрузка фото
 @app.route('/upload', methods=['POST'])
 def upload():
-    file = request.files.get('photo')
-    category = request.form.get('category')
-    username = request.form.get('username', 'Аноним')
-
-    if not file or not category:
-        return jsonify({'status': 'error', 'message': 'Файл или категория не указаны'})
-
+    global photo_id_counter
+    if 'photo' not in request.files:
+        return jsonify({'status': 'error', 'message': 'Нет файла'}), 400
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'}), 400
+    
     filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
-    photo_id = len(photos_db) + 1
-    photos_db.append({
-        'id': photo_id,
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    
+    # Добавляем фото в "базу"
+    photo = {
+        'id': photo_id_counter,
         'filename': filename,
-        'category': category,
-        'username': username,
+        'category': request.form.get('category', 'Не указано'),
+        'username': request.form.get('username', 'Аноним'),
         'votes': 0
-    })
+    }
+    photos.append(photo)
+    photo_id_counter += 1
+    
+    return jsonify({'status': 'ok', 'photo_id': photo['id']})
 
-    return jsonify({'status': 'ok', 'photo_id': photo_id})
-
-# Получение фото для ленты голосования
-@app.route('/photos')
+@app.route('/photos', defaults={'category': None})
 @app.route('/photos/<category>')
-def get_photos(category=None):
+def get_photos(category):
     if category:
-        filtered = [p for p in photos_db if p['category'] == category]
+        filtered = [p for p in photos if p['category'] == category]
     else:
-        filtered = photos_db
-    return jsonify(filtered)
+        filtered = photos
+    # Возвращаем только нужные поля
+    data = [{'id': p['id'], 'filename': p['filename'], 'votes': p['votes']} for p in filtered]
+    return jsonify(data)
 
-# Статика: доступ к загруженным фото
 @app.route('/static/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# Для локальной проверки (можно убрать на PythonAnywhere)
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Запуск локально на порту 5001
+    app.run(debug=True, port=5001)
