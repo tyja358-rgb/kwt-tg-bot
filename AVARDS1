@@ -1,142 +1,55 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Moldova Animal</title>
-    <style>
-        /* Минимальные стили для корректного отображения */
-        #upload-section { display: none; margin-top: 20px; }
-        .vote-feed { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .vote-item { border: 1px solid #ccc; padding: 10px; width: 150px; text-align: center; }
-        .vote-counter { margin-top: 5px; font-weight: bold; }
-        .vote-buttons { margin-top: 5px; }
-    </style>
-</head>
-<body>
+from flask import Flask, request, jsonify, send_from_directory
+import os
 
-<div class="category-filter">
-    <button onclick="selectCategory('Феликс')">Феликс</button>
-    <!-- Добавляй другие категории здесь -->
-</div>
+app = Flask(__name__)
 
-<div id="upload-section">
-    <form id="upload-form">
-        <input type="file" id="photo" accept="image/*" required>
-        <br><br>
-        <button type="submit">Загрузить фото</button>
-    </form>
-    <p id="message"></p>
-</div>
+# Папка для загруженных фото
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-<div id="vote-feed" class="vote-feed">
-    <!-- Карточки с фото, ❤️ и счётчиком -->
-</div>
+# Список фото (в памяти для примера)
+photos = []
 
-<script>
-let selectedCategory = "";
-let username = "Аноним";
-let votedPhotos = {};
+# Главная страница
+@app.route('/')
+def index():
+    return 'Hello from Flask! Теперь с загрузкой фото!'
 
-function selectCategory(category) {
-    selectedCategory = category;
-    document.getElementById("upload-section").style.display = "block";
-    alert("Вы выбрали: " + category);
-}
-
-// Обработка формы загрузки
-document.getElementById('upload-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    let fileInput = document.getElementById('photo');
-    let file = fileInput.files[0];
-    if(!file) return alert("Выберите файл!");
-    let formData = new FormData();
-    formData.append('photo', file);
-    formData.append('category', selectedCategory);
-    formData.append('username', username);
-
-    fetch('/upload', { method: 'POST', body: formData })
-    .then(response => response.json())
-    .then(data => {
-        if(data.status === 'ok'){
-            document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
-            fileInput.value = "";
-            loadVoteFeed();
-        } else {
-            document.getElementById('message').innerText = "Ошибка: " + data.message;
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById('message').innerText = "Ошибка сети.";
-    });
-});
-
-// Фильтр по категории
-document.querySelectorAll('.category-filter button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        loadVoteFeed(btn.innerText.replace(/[^а-яА-ЯёЁ\s]/g, '').trim());
-    });
-});
-
-// Лента голосования с ❤️ и счётчиком
-function loadVoteFeed(categoryFilter = "") {
-    let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
-    fetch(url)
-    .then(res => res.json())
-    .then(data => {
-        let feed = document.getElementById('vote-feed');
-        feed.innerHTML = "";
-        let fragment = document.createDocumentFragment();
-        data.forEach(photo => {
-            let div = document.createElement('div');
-            div.className = 'vote-item';
-            div.dataset.id = photo.id;
-
-            let img = document.createElement('img');
-            img.src = '/static/uploads/' + photo.filename;
-            div.appendChild(img);
-
-            let counter = document.createElement('div');
-            counter.className = 'vote-counter';
-            counter.innerText = '0 ❤️';
-            div.appendChild(counter);
-
-            let btnDiv = document.createElement('div');
-            btnDiv.className = 'vote-buttons';
-            let upBtn = document.createElement('button');
-            upBtn.innerText = '❤️';
-            upBtn.className = 'vote-button';
-            btnDiv.appendChild(upBtn);
-            div.appendChild(btnDiv);
-
-            fragment.appendChild(div);
-        });
-        feed.appendChild(fragment);
-    })
-    .catch(err => console.error('Ошибка загрузки голосования:', err));
-}
-
-// Делегирование кликов по ❤️
-document.getElementById('vote-feed').addEventListener('click', function(e) {
-    if(e.target.classList.contains('vote-button')) {
-        let parent = e.target.closest('.vote-item');
-        let photoId = parent.dataset.id;
-        if(votedPhotos[photoId]){
-            alert("Вы уже голосовали за это фото!");
-            return;
-        }
-        let counter = parent.querySelector('.vote-counter');
-        let count = parseInt(counter.innerText.split(' ')[0]) + 1;
-        counter.innerText = count + ' ❤️';
-        votedPhotos[photoId] = true;
+# Загрузка фото
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('photo')
+    category = request.form.get('category', 'Без категории')
+    username = request.form.get('username', 'Аноним')
+    if not file:
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
+    
+    filename = f"{len(photos)+1}_{file.filename}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    
+    photo_entry = {
+        'id': len(photos)+1,
+        'filename': filename,
+        'category': category,
+        'username': username,
+        'votes': 0
     }
-});
+    photos.append(photo_entry)
+    
+    return jsonify({'status': 'ok', 'photo_id': photo_entry['id']})
 
-// Инициализация
-window.onload = function() {
-    loadVoteFeed();
-};
-</script>
+# Получение фото
+@app.route('/photos')
+@app.route('/photos/<category>')
+def get_photos(category=None):
+    if category:
+        filtered = [p for p in photos if p['category'] == category]
+    else:
+        filtered = photos
+    return jsonify(filtered)
 
-</body>
-</html>
+# Отдача файлов
+@app.route('/static/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
