@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moldova Pet & Farm Awards 2026</title>
+<title>Moldova Animal Awards 2026</title>
 <style>
 body {
     font-family: 'Segoe UI', sans-serif;
@@ -95,21 +95,13 @@ header {
     margin-bottom: 5px;
 }
 #upload-section {
+    display: none;
     margin-top: 20px;
-}
-#upload-section input, #upload-section button {
-    padding: 8px;
-    font-size: 1em;
-}
-#message {
-    margin-top: 10px;
-    font-weight: bold;
-    color: #ff6b81;
 }
 </style>
 </head>
 <body>
-<header>Moldova Pet & Farm Awards 2026</header>
+<header>Moldova Animal Awards 2026</header>
 
 <div class="category-filter">
     <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
@@ -119,7 +111,7 @@ header {
     <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
 </div>
 
-<div id="upload-section" style="display:none;">
+<div id="upload-section">
     <h2>Загрузите фото вашего животного</h2>
     <form id="upload-form" enctype="multipart/form-data">
         <input type="file" id="photo" accept="image/*" required>
@@ -130,7 +122,7 @@ header {
 </div>
 
 <div id="vote-feed" class="vote-feed">
-    <!-- Здесь будут карточки фото с ❤️ и счётчиком -->
+    <!-- Карточки с фото, ❤️ и счётчиком -->
 </div>
 
 <script>
@@ -168,6 +160,13 @@ document.getElementById('upload-form').addEventListener('submit', function(e){
     .catch(err => {
         console.error(err);
         document.getElementById('message').innerText = "Ошибка сети.";
+    });
+});
+
+// Фильтр по категории
+document.querySelectorAll('.category-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        loadVoteFeed(btn.innerText.replace(/[^а-яА-ЯёЁ\s]/g, '').trim());
     });
 });
 
@@ -209,7 +208,7 @@ function loadVoteFeed(categoryFilter = "") {
     .catch(err => console.error('Ошибка загрузки голосования:', err));
 }
 
-// Ограничение голосов
+// Делегирование кликов по ❤️
 document.getElementById('vote-feed').addEventListener('click', function(e){
     if(e.target.classList.contains('vote-button')){
         let parent = e.target.closest('.vote-item');
@@ -225,10 +224,10 @@ document.getElementById('vote-feed').addEventListener('click', function(e){
     }
 });
 
+// Инициализация
 window.onload = function() {
     loadVoteFeed();
 };
 </script>
-
 </body>
 </html>
