@@ -1,61 +1,98 @@
-import os
-from flask import Flask, request, jsonify, render_template
-import sqlite3
-from datetime import date
-from werkzeug.utils import secure_filename
-app = Flask(__name__)
-# Настройки для загрузки
-UPLOAD_FOLDER = '/home/Moldova2026/mysite/static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# создаём папку uploads, если её нет
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-# Главная страница
-@app.route('/')
-def index():
-    return render_template('index.html')
-# Регистрация участника
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.json
-    username = data.get('username')
-    category = data.get('category')
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO users (username, category, registration_date) VALUES (?, ?, ?)",
-        (username, category, date.today())
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({'status': 'ok', 'username': username, 'category': category})
-# Endpoint для загрузки фото
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files.get('photo')
-    category = request.form.get('category')
-    username = request.form.get('username', 'Аноним')
-    if not file or not category:
-        return jsonify({'status': 'error', 'message': 'Нет файла или категории'})
-    if not allowed_file(file.filename):
-        return jsonify({'status': 'error', 'message': 'Недопустимый формат файла'})
-    # Сохраняем фото в папку
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO photos (user_id, category, upload_date) VALUES ((SELECT id FROM users WHERE username=? LIMIT 1), ?, ?)",
-        (username, category, date.today())
-    )
-    photo_id = c.lastrowid
-    conn.commit()
-    conn.close()
-    filename = f"{photo_id}.jpg"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-    return jsonify({'status': 'ok', 'photo_id': photo_id, 'filename': filename})
-# Запуск приложения
-if __name__ == '__main__':
-    app.run(
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Moldova Pet & Farm Awards 2026</title>
+</head>
+<body>
+    <h1>Moldova Pet & Farm Awards 2026</h1>
+
+    <p>Выберите категорию:</p>
+    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
+    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
+    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
+    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
+    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
+
+    <div id="upload-section" style="display:none; margin-top:20px;">
+        <h2>Загрузите фото вашего животного</h2>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" id="photo" accept="image/*" required>
+            <br><br>
+            <button type="submit">Загрузить фото</button>
+        </form>
+        <p id="message"></p>
+    </div>
+
+    <!-- ГАЛЕРЕЯ -->
+    <div id="gallery" style="margin-top:20px;">
+        <h2>Галерея</h2>
+        <div id="photos"></div>
+    </div>
+
+    <script>
+        let selectedCategory = "";
+        let username = "Аноним"; // можно сделать input, если нужно
+
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.getElementById("upload-section").style.display = "block";
+            alert("Вы выбрали: " + category);
+        }
+
+        // Обработка формы загрузки
+        document.getElementById('upload-form').addEventListener('submit', function(e){
+            e.preventDefault();
+            let fileInput = document.getElementById('photo');
+            let file = fileInput.files[0];
+            if(!file) return alert("Выберите файл!");
+            let formData = new FormData();
+            formData.append('photo', file);
+            formData.append('category', selectedCategory);
+            formData.append('username', username);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok'){
+                    document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
+                    fileInput.value = "";
+                    loadGallery(); // обновляем галерею
+                } else {
+                    document.getElementById('message').innerText = "Ошибка: " + data.message;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('message').innerText = "Ошибка сети.";
+            });
+        });
+
+        // Функция загрузки галереи
+        function loadGallery() {
+            fetch('/photos')
+            .then(res => res.json())
+            .then(data => {
+                let container = document.getElementById('photos');
+                container.innerHTML = ""; // очищаем перед добавлением
+                data.forEach(photo => {
+                    let img = document.createElement('img');
+                    img.src = '/static/uploads/' + photo.filename;
+                    img.style.width = '150px';
+                    img.style.margin = '5px';
+                    container.appendChild(img);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки галереи:', err));
+        }
+
+        // Загружаем галерею при открытии страницы
+        window.onload = function() {
+            loadGallery();
+        };
+    </script>
+</body>
+</html>
