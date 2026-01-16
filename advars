@@ -1,4 +1,29 @@
-
+  GNU nano 6.2                                                                                                                                                                                                                                                          /home/Moldova2026/mysite/app.py                                                                                                                                                                                                                                                                    
+import os
+from flask import Flask, request, jsonify, render_template
+import sqlite3
+from datetime import date
+app = Flask(__name__)
+UPLOAD_FOLDER = '/home/Moldova2026/mysite/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# создаём папку uploads, если её вдруг нет
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+import os
+from werkzeug.utils import secure_filename
+# Главная страница
+@app.route('/')
+def index():
+    return render_template('index.html')  # 4 пробела
+# Регистрация участника
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    username = data.get('username')
+    category = data.get('category')
     # Соединение с базой
     conn = sqlite3.connect('moldova_pet_awards.db')
     c = conn.cursor()
@@ -23,7 +48,7 @@ def allowed_file(filename):
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'photo' not in request.files:
-        return jsonify({'status': 'error', 'message': 'Файл не выб��ан'})
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
     file = request.files['photo']
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'Файл не выбран'})
