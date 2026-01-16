@@ -1,129 +1,28 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Moldova Animal</title>
-    <style>
-        #upload-section { display: none; margin-top: 20px; }
-        .vote-feed { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .vote-item { border: 1px solid #ccc; padding: 10px; width: 150px; text-align: center; }
-        .vote-counter { margin-top: 5px; font-weight: bold; }
-        .vote-buttons { margin-top: 5px; }
-    </style>
-</head>
-<body>
-    <div class="category-filter">
-        <button onclick="selectCategory('Феликс')">Феликс</button>
-        <button onclick="selectCategory('Другие')">Другие</button>
-    </div>
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-    <div id="upload-section">
-        <form id="upload-form">
-            <input type="file" id="photo" accept="image/*" required>
-            <br><br>
-            <button type="submit">Загрузить фото</button>
-        </form>
-        <p id="message"></p>
-    </div>
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Открыть Moldova Animal",
+                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")
+            )
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
+        reply_markup=reply_markup
+    )
 
-    <div id="vote-feed" class="vote-feed"></div>
+def main():
+    app = ApplicationBuilder().token(
+        "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
+    ).build()
+    app.add_handler(CommandHandler("start", start))
+    print("Бот запущен...")
+    app.run_polling()
 
-    <script>
-        let selectedCategory = "";
-        let username = "Аноним";
-        let votedPhotos = {};
-
-        function selectCategory(category) {
-            selectedCategory = category;
-            document.getElementById("upload-section").style.display = "block";
-            loadVoteFeed(category);
-        }
-
-        // Загрузка фото
-        document.getElementById('upload-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            let fileInput = document.getElementById('photo');
-            let file = fileInput.files[0];
-            if(!file) return alert("Выберите файл!");
-
-            let formData = new FormData();
-            formData.append('photo', file);
-            formData.append('category', selectedCategory);
-            formData.append('username', username);
-
-            fetch('/upload', { method: 'POST', body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'ok'){
-                        document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
-                        fileInput.value = "";
-                        loadVoteFeed(selectedCategory);
-                    } else {
-                        document.getElementById('message').innerText = "Ошибка: " + data.message;
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('message').innerText = "Ошибка сети.";
-                });
-        });
-
-        // Лента голосования
-        function loadVoteFeed(categoryFilter = "") {
-            let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    let feed = document.getElementById('vote-feed');
-                    feed.innerHTML = "";
-                    data.forEach(photo => {
-                        let div = document.createElement('div');
-                        div.className = 'vote-item';
-                        div.dataset.id = photo.id;
-
-                        let img = document.createElement('img');
-                        img.src = '/static/uploads/' + photo.filename;
-                        img.width = 120;
-                        div.appendChild(img);
-
-                        let counter = document.createElement('div');
-                        counter.className = 'vote-counter';
-                        counter.innerText = photo.votes + ' ❤️';
-                        div.appendChild(counter);
-
-                        let btnDiv = document.createElement('div');
-                        btnDiv.className = 'vote-buttons';
-                        let upBtn = document.createElement('button');
-                        upBtn.innerText = '❤️';
-                        upBtn.className = 'vote-button';
-                        btnDiv.appendChild(upBtn);
-                        div.appendChild(btnDiv);
-
-                        feed.appendChild(div);
-                    });
-                })
-                .catch(err => console.error('Ошибка загрузки голосования:', err));
-        }
-
-        // Голосование
-        document.getElementById('vote-feed').addEventListener('click', function(e) {
-            if(e.target.classList.contains('vote-button')) {
-                let parent = e.target.closest('.vote-item');
-                let photoId = parent.dataset.id;
-                if(votedPhotos[photoId]){
-                    alert("Вы уже голосовали за это фото!");
-                    return;
-                }
-                let counter = parent.querySelector('.vote-counter');
-                let count = parseInt(counter.innerText.split(' ')[0]) + 1;
-                counter.innerText = count + ' ❤️';
-                votedPhotos[photoId] = true;
-            }
-        });
-
-        window.onload = function() {
-            loadVoteFeed();
-        };
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    main()
