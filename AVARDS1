@@ -1,137 +1,143 @@
 <script>
-    let selectedCategory = "";
-    let username = "Аноним"; // можно сделать input, если нужно
+let selectedCategory = "";
+let username = "Аноним"; 
+let votedPhotos = {};
 
-    // Глобальный объект для отслеживания, за какие фото уже голосовали
-    let votedPhotos = {};
+function selectCategory(category) {
+    selectedCategory = category;
+    document.getElementById("upload-section").style.display = "block";
+    alert("Вы выбрали: " + category);
+}
 
-    function selectCategory(category) {
-        selectedCategory = category;
-        document.getElementById("upload-section").style.display = "block";
-        alert("Вы выбрали: " + category);
-    }
-
-    // Обработка формы загрузки
-    document.getElementById('upload-form').addEventListener('submit', function(e){
-        e.preventDefault();
-        let fileInput = document.getElementById('photo');
-        let file = fileInput.files[0];
-        if(!file) return alert("Выберите файл!");
-        let formData = new FormData();
-        formData.append('photo', file);
-        formData.append('category', selectedCategory);
-        formData.append('username', username);
-        fetch('/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === 'ok'){
-                document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
-                fileInput.value = "";
-                loadGallery();   // обновляем галерею
-                loadVoteFeed();  // обновляем ленту голосования
-            } else {
-                document.getElementById('message').innerText = "Ошибка: " + data.message;
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            document.getElementById('message').innerText = "Ошибка сети.";
-        });
+// Обработка формы загрузки
+document.getElementById('upload-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    let fileInput = document.getElementById('photo');
+    let file = fileInput.files[0];
+    if(!file) return alert("Выберите файл!");
+    let formData = new FormData();
+    formData.append('photo', file);
+    formData.append('category', selectedCategory);
+    formData.append('username', username);
+    fetch('/upload', { method: 'POST', body: formData })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'ok'){
+            document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
+            fileInput.value = "";
+            loadGallery();
+            loadVoteFeed();
+        } else {
+            document.getElementById('message').innerText = "Ошибка: " + data.message;
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById('message').innerText = "Ошибка сети.";
     });
+});
 
-    // Функция обновления галереи
-    function updateGallery(data) {
-        let container = document.getElementById('photos');
-        container.innerHTML = ""; // очищаем перед добавлением
-        data.forEach(photo => {
-            let img = document.createElement('img');
-            img.src = '/static/uploads/' + photo.filename;
-            img.style.width = '150px';
-            img.style.margin = '5px';
-            container.appendChild(img);
-        });
-    }
+// Функция обновления галереи
+function updateGallery(data) {
+    let container = document.getElementById('photos');
+    container.innerHTML = "";
+    data.forEach(photo => {
+        let img = document.createElement('img');
+        img.src = '/static/uploads/' + photo.filename;
+        img.style.width = '150px';
+        img.style.margin = '5px';
+        container.appendChild(img);
+    });
+}
 
-    // Функция загрузки галереи
-    function loadGallery() {
+function loadGallery() {
+    fetch('/photos')
+    .then(res => res.json())
+    .then(updateGallery)
+    .catch(err => console.error('Ошибка загрузки галереи:', err));
+}
+
+// Фильтр по категории
+document.getElementById('category-filter').addEventListener('change', function() {
+    let selected = this.value;
+    if(selected === "") {
         fetch('/photos')
         .then(res => res.json())
         .then(updateGallery)
         .catch(err => console.error('Ошибка загрузки галереи:', err));
-    }
-
-    // Фильтр галереи по категории
-    document.getElementById('category-filter').addEventListener('change', function() {
-        let selected = this.value;
-        if(selected === "") {
-            fetch('/photos')
-            .then(res => res.json())
-            .then(updateGallery)
-            .catch(err => console.error('Ошибка загрузки галереи:', err));
-            loadVoteFeed(); // обновляем ленту голосования без фильтра
-        } else {
-            fetch('/photos/' + encodeURIComponent(selected))
-            .then(res => res.json())
-            .then(updateGallery)
-            .catch(err => console.error('Ошибка загрузки галереи:', err));
-            loadVoteFeed(selected); // обновляем ленту голосования по выбранной категории
-        }
-    });
-
-    // Лента голосования с ❤️ и счётчиком сверху с ограничителем
-    function loadVoteFeed(categoryFilter = "") {
-        let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
-        fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            let feed = document.getElementById('vote-feed');
-            feed.innerHTML = "";
-            data.forEach(photo => {
-                let div = document.createElement('div');
-                div.className = 'vote-item';
-
-                let img = document.createElement('img');
-                img.src = '/static/uploads/' + photo.filename;
-                div.appendChild(img);
-
-                // Счётчик голосов сверху
-                let counter = document.createElement('div');
-                counter.style.marginBottom = '5px';
-                counter.style.fontWeight = 'bold';
-                counter.innerText = '0 ❤️';
-                div.appendChild(counter);
-
-                // Кнопка голосования ❤️
-                let btnDiv = document.createElement('div');
-                btnDiv.className = 'vote-buttons';
-                let upBtn = document.createElement('button');
-                upBtn.innerText = '❤️';
-                btnDiv.appendChild(upBtn);
-                div.appendChild(btnDiv);
-
-                // Обработка голосов с ограничителем
-                upBtn.onclick = () => {
-                    if (!votedPhotos[photo.id]) {
-                        let count = parseInt(counter.innerText.split(' ')[0]) + 1;
-                        counter.innerText = count + ' ❤️';
-                        votedPhotos[photo.id] = true; // помечаем, что пользователь проголосовал
-                    } else {
-                        alert("Вы уже проголосовали за это фото!");
-                    }
-                };
-
-                feed.appendChild(div);
-            });
-        })
-        .catch(err => console.error('Ошибка загрузки голосования:', err));
-    }
-
-    // Загружаем галерею и ленту при открытии страницы
-    window.onload = function() {
-        loadGallery();
         loadVoteFeed();
-    };
+    } else {
+        fetch('/photos/' + encodeURIComponent(selected))
+        .then(res => res.json())
+        .then(updateGallery)
+        .catch(err => console.error('Ошибка загрузки галереи:', err));
+        loadVoteFeed(selected);
+    }
+});
+
+// Лента голосования с ❤️ и счётчиком (оптимизировано)
+function loadVoteFeed(categoryFilter = "") {
+    let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
+    fetch(url)
+    .then(res => res.json())
+    .then(data => {
+        let feed = document.getElementById('vote-feed');
+        feed.innerHTML = "";
+        let fragment = document.createDocumentFragment(); // используем fragment для быстрой вставки
+
+        data.forEach(photo => {
+            let div = document.createElement('div');
+            div.className = 'vote-item';
+            div.dataset.id = photo.id; // id фото
+
+            let img = document.createElement('img');
+            img.src = '/static/uploads/' + photo.filename;
+            div.appendChild(img);
+
+            // Счётчик сверху
+            let counter = document.createElement('div');
+            counter.style.marginBottom = '5px';
+            counter.style.fontWeight = 'bold';
+            counter.innerText = '0 ❤️';
+            counter.className = 'vote-counter';
+            div.appendChild(counter);
+
+            // Кнопка ❤️
+            let btnDiv = document.createElement('div');
+            btnDiv.className = 'vote-buttons';
+            let upBtn = document.createElement('button');
+            upBtn.innerText = '❤️';
+            upBtn.className = 'vote-button';
+            btnDiv.appendChild(upBtn);
+            div.appendChild(btnDiv);
+
+            fragment.appendChild(div);
+        });
+
+        feed.appendChild(fragment);
+    })
+    .catch(err => console.error('Ошибка загрузки голосования:', err));
+}
+
+// Делегирование кликов по ❤️
+document.getElementById('vote-feed').addEventListener('click', function(e){
+    if(e.target.classList.contains('vote-button')){
+        let parent = e.target.closest('.vote-item');
+        let photoId = parent.dataset.id;
+        if(votedPhotos[photoId]){
+            alert("Вы уже голосовали за это фото!");
+            return;
+        }
+        let counter = parent.querySelector('.vote-counter');
+        let count = parseInt(counter.innerText.split(' ')[0]) + 1;
+        counter.innerText = count + ' ❤️';
+        votedPhotos[photoId] = true;
+    }
+});
+
+// Инициализация
+window.onload = function() {
+    loadGallery();
+    loadVoteFeed();
+};
 </script>
