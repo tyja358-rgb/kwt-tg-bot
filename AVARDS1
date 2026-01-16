@@ -1,5 +1,4 @@
-  GNU nano 6.2                                                                                                                                                                                             /home/Moldova2026/mysite/templates/index.html                                                                                                                                                                                                      
-O<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -13,6 +12,7 @@ O<!DOCTYPE html>
     <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
     <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
     <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
+
     <div id="upload-section" style="display:none; margin-top:20px;">
         <h2>Загрузите фото вашего животного</h2>
         <form id="upload-form" enctype="multipart/form-data">
@@ -22,19 +22,36 @@ O<!DOCTYPE html>
         </form>
         <p id="message"></p>
     </div>
+
+    <!-- Фильтр категорий -->
+    <div style="margin-top:10px;">
+        <label for="category-filter">Показать категорию:</label>
+        <select id="category-filter">
+            <option value="">Все категории</option>
+            <option value="Домашние питомцы">Домашние питомцы</option>
+            <option value="Фермерские животные">Фермерские животные</option>
+            <option value="Экзотические">Экзотические</option>
+            <option value="Гран-при">Гран-при</option>
+            <option value="Приз зрительских симпатий">Приз зрительских симпатий</option>
+        </select>
+    </div>
+
     <!-- ГАЛЕРЕЯ -->
     <div id="gallery" style="margin-top:20px;">
         <h2>Галерея</h2>
         <div id="photos"></div>
     </div>
+
     <script>
         let selectedCategory = "";
         let username = "Аноним"; // можно сделать input, если нужно
+
         function selectCategory(category) {
             selectedCategory = category;
             document.getElementById("upload-section").style.display = "block";
             alert("Вы выбрали: " + category);
         }
+
         // Обработка формы загрузки
         document.getElementById('upload-form').addEventListener('submit', function(e){
             e.preventDefault();
@@ -64,23 +81,44 @@ O<!DOCTYPE html>
                 document.getElementById('message').innerText = "Ошибка сети.";
             });
         });
+
+        // Функция обновления галереи
+        function updateGallery(data) {
+            let container = document.getElementById('photos');
+            container.innerHTML = ""; // очищаем перед добавлением
+            data.forEach(photo => {
+                let img = document.createElement('img');
+                img.src = '/static/uploads/' + photo.filename;
+                img.style.width = '150px';
+                img.style.margin = '5px';
+                container.appendChild(img);
+            });
+        }
+
         // Функция загрузки галереи
         function loadGallery() {
             fetch('/photos')
             .then(res => res.json())
-            .then(data => {
-                let container = document.getElementById('photos');
-                container.innerHTML = ""; // очищаем перед добавлением
-                data.forEach(photo => {
-                    let img = document.createElement('img');
-                    img.src = '/static/uploads/' + photo.filename;
-                    img.style.width = '150px';
-                    img.style.margin = '5px';
-                    container.appendChild(img);
-                });
-            })
+            .then(updateGallery)
             .catch(err => console.error('Ошибка загрузки галереи:', err));
         }
+
+        // Фильтр по категории
+        document.getElementById('category-filter').addEventListener('change', function() {
+            let selected = this.value;
+            if(selected === "") {
+                fetch('/photos')
+                .then(res => res.json())
+                .then(updateGallery)
+                .catch(err => console.error('Ошибка загрузки галереи:', err));
+            } else {
+                fetch('/photos/' + encodeURIComponent(selected))
+                .then(res => res.json())
+                .then(updateGallery)
+                .catch(err => console.error('Ошибка загрузки галереи:', err));
+            }
+        });
+
         // Загружаем галерею при открытии страницы
         window.onload = function() {
             loadGallery();
