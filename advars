@@ -1,64 +1,11 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Moldova Pet & Farm Awards 2026</title>
-</head>
-<body>
-    <h1>Moldova Pet & Farm Awards 2026</h1>
-    <p>Выберите категорию:</p>
+UPLOAD_FOLDER = '/home/Moldova2026/mysite/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
-    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
-    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
-    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
-    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-    <div id="upload-section" style="display:none; margin-top:20px;">
-        <h2>Загрузите фото вашего животного</h2>
-        <form id="upload-form">
-            <input type="file" id="photo" accept="image/*" required>
-            <br><br>
-            <button type="submit">Загрузить фото</button>
-        </form>
-        <p id="message"></p>
-    </div>
+# создаём папку uploads, если её вдруг нет
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-    <script>
-        let selectedCategory = "";
-
-        function selectCategory(category) {
-            selectedCategory = category;
-            document.getElementById("upload-section").style.display = "block";
-            alert("Вы выбрали: " + category);
-        }
-
-        document.getElementById("upload-form").addEventListener("submit", function(e) {
-            e.preventDefault();
-
-            let fileInput = document.getElementById("photo");
-            if (!fileInput.files[0]) {
-                alert("Выберите фото!");
-                return;
-            }
-
-            let formData = new FormData();
-            formData.append("photo", fileInput.files[0]);
-            formData.append("category", selectedCategory);
-            formData.append("username", "test_user"); // позже заменим на реального пользователя
-
-            fetch("/upload", {
-                method: "POST",
-                body: formData
-            })
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById("message").innerText = "Фото отправлено!";
-            })
-            .catch(err => {
-                document.getElementById("message").innerText = "Ошибка сервера";
-            });
-        });
-    </script>
-</body>
-</html>
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
