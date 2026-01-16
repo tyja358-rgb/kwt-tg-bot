@@ -2,6 +2,9 @@
     let selectedCategory = "";
     let username = "Аноним"; // можно сделать input, если нужно
 
+    // Глобальный объект для отслеживания, за какие фото уже голосовали
+    let votedPhotos = {};
+
     function selectCategory(category) {
         selectedCategory = category;
         document.getElementById("upload-section").style.display = "block";
@@ -78,7 +81,7 @@
         }
     });
 
-    // Лента голосования с ❤️ и счётчиком
+    // Лента голосования с ❤️ и счётчиком сверху с ограничителем
     function loadVoteFeed(categoryFilter = "") {
         let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
         fetch(url)
@@ -94,13 +97,14 @@
                 img.src = '/static/uploads/' + photo.filename;
                 div.appendChild(img);
 
-                // Кнопка голосования ❤️ с счётчиком сверху
+                // Счётчик голосов сверху
                 let counter = document.createElement('div');
                 counter.style.marginBottom = '5px';
                 counter.style.fontWeight = 'bold';
                 counter.innerText = '0 ❤️';
                 div.appendChild(counter);
 
+                // Кнопка голосования ❤️
                 let btnDiv = document.createElement('div');
                 btnDiv.className = 'vote-buttons';
                 let upBtn = document.createElement('button');
@@ -108,10 +112,15 @@
                 btnDiv.appendChild(upBtn);
                 div.appendChild(btnDiv);
 
-                // Обработка голосов
+                // Обработка голосов с ограничителем
                 upBtn.onclick = () => {
-                    let count = parseInt(counter.innerText.split(' ')[0]) + 1;
-                    counter.innerText = count + ' ❤️';
+                    if (!votedPhotos[photo.id]) {
+                        let count = parseInt(counter.innerText.split(' ')[0]) + 1;
+                        counter.innerText = count + ' ❤️';
+                        votedPhotos[photo.id] = true; // помечаем, что пользователь проголосовал
+                    } else {
+                        alert("Вы уже проголосовали за это фото!");
+                    }
                 };
 
                 feed.appendChild(div);
