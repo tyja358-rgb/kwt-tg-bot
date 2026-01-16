@@ -19,12 +19,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Инициализация бота
 def main():
-    app = ApplicationBuilder().token("8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw").build()
-
+    app = ApplicationBuilder().token(
+        "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
+    ).build()
     app.add_handler(CommandHandler("start", start))
-
     print("Бот запущен...")
     app.run_polling()
 
+# Запуск бота
 if __name__ == "__main__":
     main()
