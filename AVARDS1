@@ -1,36 +1,57 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import os
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-photos = []  # список загруженных фото
+photos = []  # Список всех загруженных фото
+voted_photos = {}  # Для отслеживания голосов пользователей (можно доработать)
 
+# Главная страница
 @app.route('/')
 def index():
-    return "Hello from Flask! Теперь с загрузкой фото!"
+    return render_template('index.html')
 
+# Загрузка фото
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files.get('photo')
     category = request.form.get('category', '')
     username = request.form.get('username', 'Аноним')
+
     if not file:
-        return jsonify({'status':'error','message':'Нет файла'})
+        return jsonify({'status': 'error', 'message': 'Нет файла'})
+
     filename = file.filename
-    file.save(os.path.join(UPLOAD_FOLDER, filename))
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(file_path)
+
     photo_id = len(photos) + 1
-    photos.append({'id': photo_id, 'filename': filename, 'category': category, 'username': username})
-    return jsonify({'status':'ok','photo_id':photo_id})
+    photos.append({
+        'id': photo_id,
+        'filename': filename,
+        'category': category,
+        'username': username,
+        'votes': 0
+    })
 
+    return jsonify({'status': 'ok', 'photo_id': photo_id})
+
+# Получение списка фото (по категории или все)
 @app.route('/photos')
-def get_photos():
-    return jsonify(photos)
+@app.route('/photos/<category>')
+def get_photos(category=None):
+    if category:
+        filtered = [p for p in photos if p['category'] == category]
+    else:
+        filtered = photos
+    return jsonify(filtered)
 
+# Доступ к загруженным файлам
 @app.route('/static/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
