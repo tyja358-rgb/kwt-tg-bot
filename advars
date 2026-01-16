@@ -1,11 +1,39 @@
-UPLOAD_FOLDER = '/home/Moldova2026/mysite/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'photo' not in request.files:
+        return jsonify({'status': 'error', 'message': 'Файл не найден'})
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    file = request.files['photo']
 
-# создаём папку uploads, если её вдруг нет
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        category = request.form.get('category', 'Не указана')
+        username = request.form.get('username', 'Аноним')
+
+        conn = sqlite3.connect('moldova_pet_awards.db')
+        c = conn.cursor()
+
+        # Записываем фото в таблицу photos
+        c.execute(
+            """
+            INSERT INTO photos (user_id, category, upload_date, likes)
+            VALUES (
+                (SELECT id FROM users WHERE username = ? LIMIT 1),
+                ?, ?, 0
+            )
+            """,
+            (username, category, date.today())
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'status': 'ok', 'filename': filename})
+
+    return jsonify({'status': 'error', 'message': 'Неверный формат файла'})
