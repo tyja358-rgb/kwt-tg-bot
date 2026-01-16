@@ -1,63 +1,31 @@
-  GNU nano 6.2                                                                                                                                            /home/Moldova2026/mysite/app.py                                                                                                                                                     
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO users (username, category, registration_date) VALUES (?, ?, ?)",
-        (username, category, date.today())
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import Updater, CommandHandler, CallbackContext
+
+# Команда /start
+def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Открыть Moldova Animal",
+                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")  # сюда твой URL на GitHub Pages
+            )
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(
+        "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
+        reply_markup=reply_markup
     )
-    conn.commit()
-    conn.close()
-    return jsonify({'status': 'ok', 'username': username, 'category': category})
-# Endpoint для загрузки фото
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files.get('photo')
-    category = request.form.get('category')
-    username = request.form.get('username', 'Аноним')
-    if not file or not category:
-        return jsonify({'status': 'error', 'message': 'Нет файла или категории'})
-    if not allowed_file(file.filename):
-        return jsonify({'status': 'error', 'message': 'Недопустимый формат файла'})
-    # Сохраняем фото в папку
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO photos (user_id, category, upload_date) VALUES ((SELECT id FROM users WHERE username=? LIMIT 1), ?, ?)",
-        (username, category, date.today())
-    )
-    photo_id = c.lastrowid
-    conn.commit()
-    conn.close()
-    filename = f"{photo_id}.jpg"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-    return jsonify({'status': 'ok', 'photo_id': photo_id, 'filename': filename})
-# Маршрут для получения всех фото (галерея)
-@app.route('/photos', methods=['GET'])
-def get_photos():
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute("SELECT id FROM photos ORDER BY id DESC")
-    rows = c.fetchall()
-    conn.close()
-    photos = []
-    for row in rows:
-        photo_id = row[0]
-        photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
-    return jsonify(photos)
-# НОВЫЙ маршрут для получения фото по категории
-@app.route('/photos/<category>', methods=['GET'])
-def get_photos_by_category(category):
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute("SELECT id FROM photos WHERE category=? ORDER BY id DESC", (category,))
-    rows = c.fetchall()
-    conn.close()
-    photos = []
-    for row in rows:
-        photo_id = row[0]
-        photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
-    return jsonify(photos)
-# Запуск приложения
-if __name__ == '__main__':
-    app.run()
+
+# Инициализация бота
+def main():
+    updater = Updater("ВАШ_ТОКЕН_БОТА", use_context=True)  # вставь токен сюда
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler("start", start))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
