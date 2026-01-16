@@ -1,23 +1,28 @@
-  GNU nano 6.2                                                                                                                                                                                                    /home/Moldova2026/mysite/app.py                                                                                                                                                                                                             
 import os
 from flask import Flask, request, jsonify, render_template
 import sqlite3
 from datetime import date
 from werkzeug.utils import secure_filename
+
 app = Flask(__name__)
+
 # Настройки для загрузки
 UPLOAD_FOLDER = '/home/Moldova2026/mysite/static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # создаём папку uploads, если её нет
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 # Главная страница
 @app.route('/')
 def index():
     return render_template('index.html')
+
 # Регистрация участника
 @app.route('/register', methods=['POST'])
 def register():
@@ -33,6 +38,7 @@ def register():
     conn.commit()
     conn.close()
     return jsonify({'status': 'ok', 'username': username, 'category': category})
+
 # Endpoint для загрузки фото
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -43,6 +49,7 @@ def upload():
         return jsonify({'status': 'error', 'message': 'Нет файла или категории'})
     if not allowed_file(file.filename):
         return jsonify({'status': 'error', 'message': 'Недопустимый формат файла'})
+
     # Сохраняем фото в папку
     conn = sqlite3.connect('moldova_pet_awards.db')
     c = conn.cursor()
@@ -53,16 +60,17 @@ def upload():
     photo_id = c.lastrowid
     conn.commit()
     conn.close()
+
     filename = f"{photo_id}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     file.save(filepath)
     return jsonify({'status': 'ok', 'photo_id': photo_id, 'filename': filename})
-    # Маршрут для получения всех фото (галерея)
+
+# Маршрут для получения всех фото (галерея)
 @app.route('/photos', methods=['GET'])
 def get_photos():
     conn = sqlite3.connect('moldova_pet_awards.db')
     c = conn.cursor()
-    # Берем id и имя файла из папки uploads (photo_id.jpg)
     c.execute("SELECT id FROM photos ORDER BY id DESC")
     rows = c.fetchall()
     conn.close()
@@ -71,6 +79,21 @@ def get_photos():
         photo_id = row[0]
         photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
     return jsonify(photos)
+
+# НОВЫЙ маршрут для получения фото по категории
+@app.route('/photos/<category>', methods=['GET'])
+def get_photos_by_category(category):
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute("SELECT id FROM photos WHERE category=? ORDER BY id DESC", (category,))
+    rows = c.fetchall()
+    conn.close()
+    photos = []
+    for row in rows:
+        photo_id = row[0]
+        photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
+    return jsonify(photos)
+
 # Запуск приложения
 if __name__ == '__main__':
     app.run()
