@@ -1,31 +1,30 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Команда /start
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
             InlineKeyboardButton(
                 "Открыть Moldova Animal",
-                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")  # сюда твой URL на GitHub Pages
+                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")
             )
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
+    await update.message.reply_text(
         "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
         reply_markup=reply_markup
     )
 
 # Инициализация бота
 def main():
-    updater = Updater("ВАШ_ТОКЕН_БОТА", use_context=True)  # вставь токен сюда
-    dispatcher = updater.dispatcher
+    app = ApplicationBuilder().token("8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw").build()
 
-    dispatcher.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start))
 
-    updater.start_polling()
-    updater.idle()
+    print("Бот запущен...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
