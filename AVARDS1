@@ -1,27 +1,31 @@
-from flask import Flask, request, jsonify, render_template
-import os
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Moldova Animal</title>
+</head>
+<body>
+    <h1>Загрузка фото</h1>
+    <form id="upload-form">
+        <input type="file" id="photo" accept="image/*" required>
+        <button type="submit">Загрузить фото</button>
+    </form>
+    <div id="vote-feed"></div>
 
-app = Flask(__name__)
-
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    if 'photo' not in request.files:
-        return jsonify({'status': 'error', 'message': 'Файл не найден'})
-    file = request.files['photo']
-    if file.filename == '':
-        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(filepath)
-    return jsonify({'status': 'ok', 'photo_id': file.filename})
-
-@app.route('/photos')
-def photos():
-    files = os.listdir(UPLOAD_FOLDER)
-    return jsonify([{'id': f, 'filename': f} for f in files])
+    <script>
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let fileInput = document.getElementById('photo');
+        let file = fileInput.files[0];
+        let formData = new FormData();
+        formData.append('photo', file);
+        fetch('/upload', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'ok') alert("Фото загружено: " + data.photo_id);
+                else alert("Ошибка: " + data.message);
+            });
+    });
+    </script>
+</body>
+</html>
