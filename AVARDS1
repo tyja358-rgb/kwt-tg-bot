@@ -1,57 +1,129 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
-import os
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Moldova Animal</title>
+    <style>
+        #upload-section { display: none; margin-top: 20px; }
+        .vote-feed { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .vote-item { border: 1px solid #ccc; padding: 10px; width: 150px; text-align: center; }
+        .vote-counter { margin-top: 5px; font-weight: bold; }
+        .vote-buttons { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="category-filter">
+        <button onclick="selectCategory('Феликс')">Феликс</button>
+        <button onclick="selectCategory('Другие')">Другие</button>
+    </div>
 
-app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    <div id="upload-section">
+        <form id="upload-form">
+            <input type="file" id="photo" accept="image/*" required>
+            <br><br>
+            <button type="submit">Загрузить фото</button>
+        </form>
+        <p id="message"></p>
+    </div>
 
-photos = []  # Список всех загруженных фото
-voted_photos = {}  # Для отслеживания голосов пользователей (можно доработать)
+    <div id="vote-feed" class="vote-feed"></div>
 
-# Главная страница
-@app.route('/')
-def index():
-    return render_template('index.html')
+    <script>
+        let selectedCategory = "";
+        let username = "Аноним";
+        let votedPhotos = {};
 
-# Загрузка фото
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files.get('photo')
-    category = request.form.get('category', '')
-    username = request.form.get('username', 'Аноним')
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.getElementById("upload-section").style.display = "block";
+            loadVoteFeed(category);
+        }
 
-    if not file:
-        return jsonify({'status': 'error', 'message': 'Нет файла'})
+        // Загрузка фото
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let fileInput = document.getElementById('photo');
+            let file = fileInput.files[0];
+            if(!file) return alert("Выберите файл!");
 
-    filename = file.filename
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(file_path)
+            let formData = new FormData();
+            formData.append('photo', file);
+            formData.append('category', selectedCategory);
+            formData.append('username', username);
 
-    photo_id = len(photos) + 1
-    photos.append({
-        'id': photo_id,
-        'filename': filename,
-        'category': category,
-        'username': username,
-        'votes': 0
-    })
+            fetch('/upload', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'ok'){
+                        document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
+                        fileInput.value = "";
+                        loadVoteFeed(selectedCategory);
+                    } else {
+                        document.getElementById('message').innerText = "Ошибка: " + data.message;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('message').innerText = "Ошибка сети.";
+                });
+        });
 
-    return jsonify({'status': 'ok', 'photo_id': photo_id})
+        // Лента голосования
+        function loadVoteFeed(categoryFilter = "") {
+            let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    let feed = document.getElementById('vote-feed');
+                    feed.innerHTML = "";
+                    data.forEach(photo => {
+                        let div = document.createElement('div');
+                        div.className = 'vote-item';
+                        div.dataset.id = photo.id;
 
-# Получение списка фото (по категории или все)
-@app.route('/photos')
-@app.route('/photos/<category>')
-def get_photos(category=None):
-    if category:
-        filtered = [p for p in photos if p['category'] == category]
-    else:
-        filtered = photos
-    return jsonify(filtered)
+                        let img = document.createElement('img');
+                        img.src = '/static/uploads/' + photo.filename;
+                        img.width = 120;
+                        div.appendChild(img);
 
-# Доступ к загруженным файлам
-@app.route('/static/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+                        let counter = document.createElement('div');
+                        counter.className = 'vote-counter';
+                        counter.innerText = photo.votes + ' ❤️';
+                        div.appendChild(counter);
 
-if __name__ == '__main__':
-    app.run(debug=True)
+                        let btnDiv = document.createElement('div');
+                        btnDiv.className = 'vote-buttons';
+                        let upBtn = document.createElement('button');
+                        upBtn.innerText = '❤️';
+                        upBtn.className = 'vote-button';
+                        btnDiv.appendChild(upBtn);
+                        div.appendChild(btnDiv);
+
+                        feed.appendChild(div);
+                    });
+                })
+                .catch(err => console.error('Ошибка загрузки голосования:', err));
+        }
+
+        // Голосование
+        document.getElementById('vote-feed').addEventListener('click', function(e) {
+            if(e.target.classList.contains('vote-button')) {
+                let parent = e.target.closest('.vote-item');
+                let photoId = parent.dataset.id;
+                if(votedPhotos[photoId]){
+                    alert("Вы уже голосовали за это фото!");
+                    return;
+                }
+                let counter = parent.querySelector('.vote-counter');
+                let count = parseInt(counter.innerText.split(' ')[0]) + 1;
+                counter.innerText = count + ' ❤️';
+                votedPhotos[photoId] = true;
+            }
+        });
+
+        window.onload = function() {
+            loadVoteFeed();
+        };
+    </script>
+</body>
+</html>
