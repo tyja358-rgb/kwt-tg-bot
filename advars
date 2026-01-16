@@ -1,18 +1,21 @@
-from flask import Flask, request, jsonify,
-render_template
+from flask import Flask, request, jsonify, render_template
 import sqlite3
 from datetime import date
+
 app = Flask(__name__)
+
 # Главная страница
 @app.route('/')
 def index():
-    return render_template('index.html')  # <-- 4 пробела перед return
+    return render_template('index.html')  # 4 пробела
+
 # Регистрация участника
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
     username = data.get('username')
     category = data.get('category')
+
     # Соединение с базой
     conn = sqlite3.connect('moldova_pet_awards.db')
     c = conn.cursor()
@@ -22,7 +25,9 @@ def register():
     )
     conn.commit()
     conn.close()
-    return jsonify({'status': 'ok', 'username': username, 'category': category})
-    if __name__ == '__main__':
-    app.run()
 
+    return jsonify({'status': 'ok', 'username': username, 'category': category})
+
+# Запуск приложения
+if __name__ == '__main__':
+    app.run()
