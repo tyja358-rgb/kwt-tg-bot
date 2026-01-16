@@ -1,5 +1,26 @@
-<div id="upload-section" style="display:none;">
-    <form id="upload-form" enctype="multipart/form-data">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Moldova Animal</title>
+    <style>
+        /* Минимальные стили для корректного отображения */
+        #upload-section { display: none; margin-top: 20px; }
+        .vote-feed { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .vote-item { border: 1px solid #ccc; padding: 10px; width: 150px; text-align: center; }
+        .vote-counter { margin-top: 5px; font-weight: bold; }
+        .vote-buttons { margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="category-filter">
+    <button onclick="selectCategory('Феликс')">Феликс</button>
+    <!-- Добавляй другие категории здесь -->
+</div>
+
+<div id="upload-section">
+    <form id="upload-form">
         <input type="file" id="photo" accept="image/*" required>
         <br><br>
         <button type="submit">Загрузить фото</button>
@@ -23,12 +44,11 @@ function selectCategory(category) {
 }
 
 // Обработка формы загрузки
-document.getElementById('upload-form').addEventListener('submit', function(e){
+document.getElementById('upload-form').addEventListener('submit', function(e) {
     e.preventDefault();
     let fileInput = document.getElementById('photo');
     let file = fileInput.files[0];
     if(!file) return alert("Выберите файл!");
-
     let formData = new FormData();
     formData.append('photo', file);
     formData.append('category', selectedCategory);
@@ -67,7 +87,6 @@ function loadVoteFeed(categoryFilter = "") {
         let feed = document.getElementById('vote-feed');
         feed.innerHTML = "";
         let fragment = document.createDocumentFragment();
-
         data.forEach(photo => {
             let div = document.createElement('div');
             div.className = 'vote-item';
@@ -84,24 +103,22 @@ function loadVoteFeed(categoryFilter = "") {
 
             let btnDiv = document.createElement('div');
             btnDiv.className = 'vote-buttons';
-
             let upBtn = document.createElement('button');
             upBtn.innerText = '❤️';
             upBtn.className = 'vote-button';
             btnDiv.appendChild(upBtn);
-
             div.appendChild(btnDiv);
+
             fragment.appendChild(div);
         });
-
         feed.appendChild(fragment);
     })
     .catch(err => console.error('Ошибка загрузки голосования:', err));
 }
 
 // Делегирование кликов по ❤️
-document.getElementById('vote-feed').addEventListener('click', function(e){
-    if(e.target.classList.contains('vote-button')){
+document.getElementById('vote-feed').addEventListener('click', function(e) {
+    if(e.target.classList.contains('vote-button')) {
         let parent = e.target.closest('.vote-item');
         let photoId = parent.dataset.id;
         if(votedPhotos[photoId]){
@@ -120,5 +137,6 @@ window.onload = function() {
     loadVoteFeed();
 };
 </script>
+
 </body>
 </html>
