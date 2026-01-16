@@ -1,32 +1,29 @@
-<script>
-document.getElementById('upload-form').addEventListener('submit', function(e){
-    e.preventDefault(); // предотвращаем перезагрузку страницы
+import os
+from flask import request
 
-    let fileInput = document.getElementById('photo');
-    let file = fileInput.files[0];
+UPLOAD_FOLDER = 'static/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-    if(!file) return alert("Выберите файл!");
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('photo')
+    category = request.form.get('category')
 
-    let formData = new FormData();
-    formData.append('photo', file);
-    formData.append('category', selectedCategory);
+    if not file or not category:
+        return jsonify({'status': 'error', 'message': 'Нет файла или категории'})
 
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.status === 'ok'){
-            document.getElementById('message').innerText = "Фото успешно загружено!";
-            fileInput.value = "";
-        } else {
-            document.getElementById('message').innerText = "Ошибка при загрузке.";
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById('message').innerText = "Ошибка сети.";
-    });
-});
-</script>
+    # Определяем id для фото
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO photos (user_id, category, upload_date) VALUES (?, ?, ?)", (0, category, date.today()))
+    photo_id = c.lastrowid
+    conn.commit()
+    conn.close()
+
+    # Сохраняем файл
+    filename = f"{photo_id}.jpg"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+
+    return jsonify({'status': 'ok', 'photo_id': photo_id})
