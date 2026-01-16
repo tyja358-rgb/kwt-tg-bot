@@ -1,233 +1,63 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moldova Animal Awards 2026</title>
-<style>
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f5f7fa;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-header {
-    background: #ff6b81;
-    color: white;
-    width: 100%;
-    padding: 15px;
-    text-align: center;
-    font-size: 1.5em;
-    font-weight: bold;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-}
-.category-filter {
-    margin: 15px 0;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-.category-filter button {
-    background: #fff;
-    border: 2px solid #ff6b81;
-    color: #ff6b81;
-    border-radius: 25px;
-    padding: 8px 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.category-filter button:hover {
-    background: #ff6b81;
-    color: white;
-}
-.vote-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 95%;
-    max-width: 400px;
-    margin-bottom: 20px;
-}
-.vote-item {
-    background: white;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    text-align: center;
-    transition: transform 0.2s;
-}
-.vote-item:hover {
-    transform: scale(1.02);
-}
-.vote-item img {
-    width: 100%;
-    display: block;
-}
-.vote-buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-    gap: 10px;
-}
-.vote-buttons button {
-    font-size: 1.2em;
-    background: #ff6b81;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.vote-buttons button:hover {
-    transform: scale(1.2);
-}
-.vote-counter {
-    font-weight: bold;
-    font-size: 1.2em;
-    margin-bottom: 5px;
-}
-#upload-section {
-    display: none;
-    margin-top: 20px;
-}
-</style>
-</head>
-<body>
-<header>Moldova Animal Awards 2026</header>
-
-<div class="category-filter">
-    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
-    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
-    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
-    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
-    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
-</div>
-
-<div id="upload-section">
-    <h2>Загрузите фото вашего животного</h2>
-    <form id="upload-form" enctype="multipart/form-data">
-        <input type="file" id="photo" accept="image/*" required>
-        <br><br>
-        <button type="submit">Загрузить фото</button>
-    </form>
-    <p id="message"></p>
-</div>
-
-<div id="vote-feed" class="vote-feed">
-    <!-- Карточки с фото, ❤️ и счётчиком -->
-</div>
-
-<script>
-let selectedCategory = "";
-let username = "Аноним";
-let votedPhotos = {};
-
-function selectCategory(category) {
-    selectedCategory = category;
-    document.getElementById("upload-section").style.display = "block";
-    alert("Вы выбрали: " + category);
-}
-
-// Обработка формы загрузки
-document.getElementById('upload-form').addEventListener('submit', function(e){
-    e.preventDefault();
-    let fileInput = document.getElementById('photo');
-    let file = fileInput.files[0];
-    if(!file) return alert("Выберите файл!");
-    let formData = new FormData();
-    formData.append('photo', file);
-    formData.append('category', selectedCategory);
-    formData.append('username', username);
-    fetch('/upload', { method: 'POST', body: formData })
-    .then(response => response.json())
-    .then(data => {
-        if(data.status === 'ok'){
-            document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
-            fileInput.value = "";
-            loadVoteFeed();
-        } else {
-            document.getElementById('message').innerText = "Ошибка: " + data.message;
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById('message').innerText = "Ошибка сети.";
-    });
-});
-
-// Фильтр по категории
-document.querySelectorAll('.category-filter button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        loadVoteFeed(btn.innerText.replace(/[^а-яА-ЯёЁ\s]/g, '').trim());
-    });
-});
-
-// Лента голосования с ❤️ и счётчиком
-function loadVoteFeed(categoryFilter = "") {
-    let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
-    fetch(url)
-    .then(res => res.json())
-    .then(data => {
-        let feed = document.getElementById('vote-feed');
-        feed.innerHTML = "";
-        let fragment = document.createDocumentFragment();
-        data.forEach(photo => {
-            let div = document.createElement('div');
-            div.className = 'vote-item';
-            div.dataset.id = photo.id;
-
-            let img = document.createElement('img');
-            img.src = '/static/uploads/' + photo.filename;
-            div.appendChild(img);
-
-            let counter = document.createElement('div');
-            counter.className = 'vote-counter';
-            counter.innerText = '0 ❤️';
-            div.appendChild(counter);
-
-            let btnDiv = document.createElement('div');
-            btnDiv.className = 'vote-buttons';
-            let upBtn = document.createElement('button');
-            upBtn.innerText = '❤️';
-            upBtn.className = 'vote-button';
-            btnDiv.appendChild(upBtn);
-            div.appendChild(btnDiv);
-
-            fragment.appendChild(div);
-        });
-        feed.appendChild(fragment);
-    })
-    .catch(err => console.error('Ошибка загрузки голосования:', err));
-}
-
-// Делегирование кликов по ❤️
-document.getElementById('vote-feed').addEventListener('click', function(e){
-    if(e.target.classList.contains('vote-button')){
-        let parent = e.target.closest('.vote-item');
-        let photoId = parent.dataset.id;
-        if(votedPhotos[photoId]){
-            alert("Вы уже голосовали за это фото!");
-            return;
-        }
-        let counter = parent.querySelector('.vote-counter');
-        let count = parseInt(counter.innerText.split(' ')[0]) + 1;
-        counter.innerText = count + ' ❤️';
-        votedPhotos[photoId] = true;
-    }
-});
-
-// Инициализация
-window.onload = function() {
-    loadVoteFeed();
-};
-</script>
-</body>
-</html>
+  GNU nano 6.2                                                                                                                                            /home/Moldova2026/mysite/app.py                                                                                                                                                     
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO users (username, category, registration_date) VALUES (?, ?, ?)",
+        (username, category, date.today())
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'status': 'ok', 'username': username, 'category': category})
+# Endpoint для загрузки фото
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('photo')
+    category = request.form.get('category')
+    username = request.form.get('username', 'Аноним')
+    if not file or not category:
+        return jsonify({'status': 'error', 'message': 'Нет файла или категории'})
+    if not allowed_file(file.filename):
+        return jsonify({'status': 'error', 'message': 'Недопустимый формат файла'})
+    # Сохраняем фото в папку
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO photos (user_id, category, upload_date) VALUES ((SELECT id FROM users WHERE username=? LIMIT 1), ?, ?)",
+        (username, category, date.today())
+    )
+    photo_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    filename = f"{photo_id}.jpg"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    return jsonify({'status': 'ok', 'photo_id': photo_id, 'filename': filename})
+# Маршрут для получения всех фото (галерея)
+@app.route('/photos', methods=['GET'])
+def get_photos():
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute("SELECT id FROM photos ORDER BY id DESC")
+    rows = c.fetchall()
+    conn.close()
+    photos = []
+    for row in rows:
+        photo_id = row[0]
+        photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
+    return jsonify(photos)
+# НОВЫЙ маршрут для получения фото по категории
+@app.route('/photos/<category>', methods=['GET'])
+def get_photos_by_category(category):
+    conn = sqlite3.connect('moldova_pet_awards.db')
+    c = conn.cursor()
+    c.execute("SELECT id FROM photos WHERE category=? ORDER BY id DESC", (category,))
+    rows = c.fetchall()
+    conn.close()
+    photos = []
+    for row in rows:
+        photo_id = row[0]
+        photos.append({'id': photo_id, 'filename': f"{photo_id}.jpg"})
+    return jsonify(photos)
+# Запуск приложения
+if __name__ == '__main__':
+    app.run()
