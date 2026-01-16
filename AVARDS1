@@ -1,201 +1,122 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Moldova Pet & Farm Awards 2026</title>
-    <style>
-        /* Стили для ленты голосования */
-        #vote-feed {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-        .vote-item {
-            width: 90vw;
-            max-width: 400px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .vote-item img {
-            width: 100%;
-            border-radius: 10px;
-        }
-        .vote-buttons {
-            margin-top: 10px;
-        }
-        .vote-buttons button {
-            margin: 0 10px;
-            padding: 8px 16px;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Moldova Pet & Farm Awards 2026</h1>
-    <p>Выберите категорию:</p>
-    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
-    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
-    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
-    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
-    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
+<script>
+    let selectedCategory = "";
+    let username = "Аноним"; // можно сделать input, если нужно
 
-    <div id="upload-section" style="display:none; margin-top:20px;">
-        <h2>Загрузите фото вашего животного</h2>
-        <form id="upload-form" enctype="multipart/form-data">
-            <input type="file" id="photo" accept="image/*" required>
-            <br><br>
-            <button type="submit">Загрузить фото</button>
-        </form>
-        <p id="message"></p>
-    </div>
+    function selectCategory(category) {
+        selectedCategory = category;
+        document.getElementById("upload-section").style.display = "block";
+        alert("Вы выбрали: " + category);
+    }
 
-    <!-- Фильтр категорий -->
-    <div style="margin-top:10px;">
-        <label for="category-filter">Показать категорию:</label>
-        <select id="category-filter">
-            <option value="">Все категории</option>
-            <option value="Домашние питомцы">Домашние питомцы</option>
-            <option value="Фермерские животные">Фермерские животные</option>
-            <option value="Экзотические">Экзотические</option>
-            <option value="Гран-при">Гран-при</option>
-            <option value="Приз зрительских симпатий">Приз зрительских симпатий</option>
-        </select>
-    </div>
-
-    <!-- ГАЛЕРЕЯ -->
-    <div id="gallery" style="margin-top:20px;">
-        <h2>Галерея</h2>
-        <div id="photos"></div>
-    </div>
-
-    <!-- Лента голосования -->
-    <div id="vote-section">
-        <h2>Голосовать</h2>
-        <div id="vote-feed"></div>
-    </div>
-
-    <script>
-        let selectedCategory = "";
-        let username = "Аноним"; // можно сделать input, если нужно
-
-        function selectCategory(category) {
-            selectedCategory = category;
-            document.getElementById("upload-section").style.display = "block";
-            alert("Вы выбрали: " + category);
-        }
-
-        // Обработка формы загрузки
-        document.getElementById('upload-form').addEventListener('submit', function(e){
-            e.preventDefault();
-            let fileInput = document.getElementById('photo');
-            let file = fileInput.files[0];
-            if(!file) return alert("Выберите файл!");
-            let formData = new FormData();
-            formData.append('photo', file);
-            formData.append('category', selectedCategory);
-            formData.append('username', username);
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status === 'ok'){
-                    document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
-                    fileInput.value = "";
-                    loadGallery(); // обновляем галерею
-                    loadVoteFeed(); // обновляем ленту голосования
-                } else {
-                    document.getElementById('message').innerText = "Ошибка: " + data.message;
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('message').innerText = "Ошибка сети.";
-            });
+    // Обработка формы загрузки
+    document.getElementById('upload-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        let fileInput = document.getElementById('photo');
+        let file = fileInput.files[0];
+        if(!file) return alert("Выберите файл!");
+        let formData = new FormData();
+        formData.append('photo', file);
+        formData.append('category', selectedCategory);
+        formData.append('username', username);
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'ok'){
+                document.getElementById('message').innerText = "Фото успешно загружено! ID: " + data.photo_id;
+                fileInput.value = "";
+                loadGallery();   // обновляем галерею
+                loadVoteFeed();  // обновляем ленту голосования
+            } else {
+                document.getElementById('message').innerText = "Ошибка: " + data.message;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('message').innerText = "Ошибка сети.";
         });
+    });
 
-        // Функция обновления галереи
-        function updateGallery(data) {
-            let container = document.getElementById('photos');
-            container.innerHTML = ""; // очищаем перед добавлением
-            data.forEach(photo => {
-                let img = document.createElement('img');
-                img.src = '/static/uploads/' + photo.filename;
-                img.style.width = '150px';
-                img.style.margin = '5px';
-                container.appendChild(img);
-            });
-        }
+    // Функция обновления галереи
+    function updateGallery(data) {
+        let container = document.getElementById('photos');
+        container.innerHTML = ""; // очищаем перед добавлением
+        data.forEach(photo => {
+            let img = document.createElement('img');
+            img.src = '/static/uploads/' + photo.filename;
+            img.style.width = '150px';
+            img.style.margin = '5px';
+            container.appendChild(img);
+        });
+    }
 
-        // Функция загрузки галереи
-        function loadGallery() {
+    // Функция загрузки галереи
+    function loadGallery() {
+        fetch('/photos')
+        .then(res => res.json())
+        .then(updateGallery)
+        .catch(err => console.error('Ошибка загрузки галереи:', err));
+    }
+
+    // Фильтр галереи по категории
+    document.getElementById('category-filter').addEventListener('change', function() {
+        let selected = this.value;
+        if(selected === "") {
             fetch('/photos')
             .then(res => res.json())
             .then(updateGallery)
             .catch(err => console.error('Ошибка загрузки галереи:', err));
-        }
-
-        // Фильтр по категории
-        document.getElementById('category-filter').addEventListener('change', function() {
-            let selected = this.value;
-            if(selected === "") {
-                fetch('/photos')
-                .then(res => res.json())
-                .then(updateGallery)
-                .catch(err => console.error('Ошибка загрузки галереи:', err));
-            } else {
-                fetch('/photos/' + encodeURIComponent(selected))
-                .then(res => res.json())
-                .then(updateGallery)
-                .catch(err => console.error('Ошибка загрузки галереи:', err));
-            }
-        });
-
-        // Лента голосования
-        function loadVoteFeed() {
-            fetch('/photos')
+            loadVoteFeed(); // обновляем ленту голосования без фильтра
+        } else {
+            fetch('/photos/' + encodeURIComponent(selected))
             .then(res => res.json())
-            .then(data => {
-                let feed = document.getElementById('vote-feed');
-                feed.innerHTML = "";
-                data.forEach(photo => {
-                    let div = document.createElement('div');
-                    div.className = 'vote-item';
-                    let img = document.createElement('img');
-                    img.src = '/static/uploads/' + photo.filename;
-                    div.appendChild(img);
-
-                    // Кнопки голосования
-                    let btnDiv = document.createElement('div');
-                    btnDiv.className = 'vote-buttons';
-                    let upBtn = document.createElement('button');
-                    upBtn.innerText = '👍';
-                    let downBtn = document.createElement('button');
-                    downBtn.innerText = '👎';
-                    btnDiv.appendChild(upBtn);
-                    btnDiv.appendChild(downBtn);
-                    div.appendChild(btnDiv);
-
-                    // Обработка голосов
-                    upBtn.onclick = () => alert('Вы проголосовали за фото ID: ' + photo.id);
-                    downBtn.onclick = () => alert('Вы проголосовали против фото ID: ' + photo.id);
-
-                    feed.appendChild(div);
-                });
-            })
-            .catch(err => console.error('Ошибка загрузки голосования:', err));
+            .then(updateGallery)
+            .catch(err => console.error('Ошибка загрузки галереи:', err));
+            loadVoteFeed(selected); // обновляем ленту голосования по выбранной категории
         }
+    });
 
-        // Загружаем галерею и ленту при открытии страницы
-        window.onload = function() {
-            loadGallery();
-            loadVoteFeed();
-        };
-    </script>
-</body>
-</html>
+    // Лента голосования
+    function loadVoteFeed(categoryFilter = "") {
+        let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
+        fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            let feed = document.getElementById('vote-feed');
+            feed.innerHTML = "";
+            data.forEach(photo => {
+                let div = document.createElement('div');
+                div.className = 'vote-item';
+                let img = document.createElement('img');
+                img.src = '/static/uploads/' + photo.filename;
+                div.appendChild(img);
+
+                // Кнопки голосования
+                let btnDiv = document.createElement('div');
+                btnDiv.className = 'vote-buttons';
+                let upBtn = document.createElement('button');
+                upBtn.innerText = '👍';
+                let downBtn = document.createElement('button');
+                downBtn.innerText = '👎';
+                btnDiv.appendChild(upBtn);
+                btnDiv.appendChild(downBtn);
+                div.appendChild(btnDiv);
+
+                // Обработка голосов
+                upBtn.onclick = () => alert('Вы проголосовали за фото ID: ' + photo.id);
+                downBtn.onclick = () => alert('Вы проголосовали против фото ID: ' + photo.id);
+
+                feed.appendChild(div);
+            });
+        })
+        .catch(err => console.error('Ошибка загрузки голосования:', err));
+    }
+
+    // Загружаем галерею и ленту при открытии страницы
+    window.onload = function() {
+        loadGallery();
+        loadVoteFeed();
+    };
+</script>
