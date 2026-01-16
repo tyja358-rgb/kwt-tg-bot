@@ -8,11 +8,57 @@
     <h1>Moldova Pet & Farm Awards 2026</h1>
     <p>Выберите категорию:</p>
 
-    <button onclick="alert('Домашние питомцы выбраны')">🐶 Домашние питомцы</button>
-    <button onclick="alert('Фермерские животные выбраны')">🐄 Фермерские животные</button>
-    <button onclick="alert('Экзотические выбраны')">🐾 Экзотические</button>
-    <button onclick="alert('Гран-при выбрано')">👑 Гран-при</button>
-    <button onclick="alert('Приз зрительских симпатий выбран')">❤️ Приз зрительских симпатий</button>
+    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
+    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
+    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
+    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
+    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
 
+    <div id="upload-section" style="display:none; margin-top:20px;">
+        <h2>Загрузите фото вашего животного</h2>
+        <form id="upload-form">
+            <input type="file" id="photo" accept="image/*" required>
+            <br><br>
+            <button type="submit">Загрузить фото</button>
+        </form>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        let selectedCategory = "";
+
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.getElementById("upload-section").style.display = "block";
+            alert("Вы выбрали: " + category);
+        }
+
+        document.getElementById("upload-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            let fileInput = document.getElementById("photo");
+            if (!fileInput.files[0]) {
+                alert("Выберите фото!");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("photo", fileInput.files[0]);
+            formData.append("category", selectedCategory);
+            formData.append("username", "test_user"); // позже заменим на реального пользователя
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById("message").innerText = "Фото отправлено!";
+            })
+            .catch(err => {
+                document.getElementById("message").innerText = "Ошибка сервера";
+            });
+        });
+    </script>
 </body>
 </html>
