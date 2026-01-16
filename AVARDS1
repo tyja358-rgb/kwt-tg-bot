@@ -1,28 +1,27 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from flask import Flask, request, jsonify, render_template
+import os
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "Открыть Moldova Animal",
-                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")
-            )
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
-        reply_markup=reply_markup
-    )
+app = Flask(__name__)
 
-def main():
-    app = ApplicationBuilder().token(
-        "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
-    ).build()
-    app.add_handler(CommandHandler("start", start))
-    print("Бот запущен...")
-    app.run_polling()
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-if __name__ == "__main__":
-    main()
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'photo' not in request.files:
+        return jsonify({'status': 'error', 'message': 'Файл не найден'})
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+    return jsonify({'status': 'ok', 'photo_id': file.filename})
+
+@app.route('/photos')
+def photos():
+    files = os.listdir(UPLOAD_FOLDER)
+    return jsonify([{'id': f, 'filename': f} for f in files])
