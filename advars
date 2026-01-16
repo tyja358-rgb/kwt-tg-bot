@@ -1,33 +1,47 @@
-from flask import Flask, request, jsonify, render_template
-import sqlite3
-from datetime import date
+import os
+from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-# Главная страница
-@app.route('/')
-def index():
-    return render_template('index.html')  # 4 пробела
+# создаем папку uploads, если нет
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-# Регистрация участника
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.json
-    username = data.get('username')
-    category = data.get('category')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-    # Соединение с базой
-    conn = sqlite3.connect('moldova_pet_awards.db')
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO users (username, category, registration_date) VALUES (?, ?, ?)",
-        (username, category, date.today())
-    )
-    conn.commit()
-    conn.close()
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    return jsonify({'status': 'ok', 'username': username, 'category': category})
+# Endpoint для загрузки фото
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'photo' not in request.files:
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
 
-# Запуск приложения
-if __name__ == '__main__':
-    app.run()
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'Файл не выбран'})
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        # Сохраняем информацию о фото в базе
+        category = request.form.get('category', 'Не указана')
+        username = request.form.get('username', 'Аноним')
+
+        conn = sqlite3.connect('moldova_pet_awards.db')
+        c = conn.cursor()
+        # Убедись, что таблица photos уже создана
+        c.execute('''
+            INSERT INTO photos (user_id, category, upload_date, likes)
+            VALUES ((SELECT id FROM users WHERE username=? LIMIT 1), ?, ?, 0)
+        ''', (username, category, date.today()))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'status': 'ok', 'filename': filename})
+    else:
+        return jsonify({'status': 'error', 'message': 'Недопустимый формат файла'})
