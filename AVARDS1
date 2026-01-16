@@ -1,31 +1,31 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Moldova Animal</title>
-</head>
-<body>
-    <h1>Загрузка фото</h1>
-    <form id="upload-form">
-        <input type="file" id="photo" accept="image/*" required>
-        <button type="submit">Загрузить фото</button>
-    </form>
-    <div id="vote-feed"></div>
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
-    <script>
-    document.getElementById('upload-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        let fileInput = document.getElementById('photo');
-        let file = fileInput.files[0];
-        let formData = new FormData();
-        formData.append('photo', file);
-        fetch('/upload', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'ok') alert("Фото загружено: " + data.photo_id);
-                else alert("Ошибка: " + data.message);
-            });
-    });
-    </script>
-</body>
-</html>
+# Команда /start
+def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Открыть Moldova Animal",
+                web_app=WebAppInfo(url="https://tyja358-rgb.github.io/miniapp/")  # сюда твой URL на GitHub Pages
+            )
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(
+        "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
+        reply_markup=reply_markup
+    )
+
+# Инициализация бота
+def main():
+    updater = Updater("ВАШ_ТОКЕН_БОТА", use_context=True)  # вставь токен сюда
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler("start", start))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
