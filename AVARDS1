@@ -1,14 +1,88 @@
+  GNU nano 6.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         /home/Moldova2026/mysite/templates/index.html                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Moldova Pet & Farm Awards 2026</title>
+    <style>
+        /* Стили для ленты голосования */
+        #vote-feed {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .vote-item {
+            width: 90vw;
+            max-width: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .vote-item img {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .vote-buttons {
+            margin-top: 10px;
+        }
+        .vote-buttons button {
+            margin: 0 10px;
+            padding: 8px 16px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Moldova Pet & Farm Awards 2026</h1>
+    <p>Выберите категорию:</p>
+    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
+    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
+    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
+    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
+    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
+    <div id="upload-section" style="display:none; margin-top:20px;">
+        <h2>Загрузите фото вашего животного</h2>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" id="photo" accept="image/*" required>
+            <br><br>
+            <button type="submit">Загрузить фото</button>
+        </form>
+        <p id="message"></p>
+    </div>
+    <!-- Фильтр категорий -->
+    <div style="margin-top:10px;">
+        <label for="category-filter">Показать категорию:</label>
+        <select id="category-filter">
+            <option value="">Все категории</option>
+            <option value="Домашние питомцы">Домашние питомцы</option>
+            <option value="Фермерские животные">Фермерские животные</option>
+            <option value="Экзотические">Экзотические</option>
+            <option value="Гран-при">Гран-при</option>
+            <option value="Приз зрительских симпатий">Приз зрительских симпатий</option>
+        </select>
+    </div>
+    <!-- ГАЛЕРЕЯ -->
+    <div id="gallery" style="display:none;margin-top:20px;">
+        <h2>Галерея</h2>
+        <div id="photos"></div>
+    </div>
+    <!-- Лента голосования -->
+    <div id="vote-section">
+        <h2>Голосовать</h2>
+        <div id="vote-feed"></div>
+    </div>
 <script>
 let selectedCategory = "";
-let username = "Аноним"; 
+let username = "Аноним";
 let votedPhotos = {};
-
 function selectCategory(category) {
     selectedCategory = category;
     document.getElementById("upload-section").style.display = "block";
     alert("Вы выбрали: " + category);
 }
-
 // Обработка формы загрузки
 document.getElementById('upload-form').addEventListener('submit', function(e){
     e.preventDefault();
@@ -36,7 +110,6 @@ document.getElementById('upload-form').addEventListener('submit', function(e){
         document.getElementById('message').innerText = "Ошибка сети.";
     });
 });
-
 // Функция обновления галереи
 function updateGallery(data) {
     let container = document.getElementById('photos');
@@ -49,14 +122,12 @@ function updateGallery(data) {
         container.appendChild(img);
     });
 }
-
 function loadGallery() {
     fetch('/photos')
     .then(res => res.json())
     .then(updateGallery)
     .catch(err => console.error('Ошибка загрузки галереи:', err));
 }
-
 // Фильтр по категории
 document.getElementById('category-filter').addEventListener('change', function() {
     let selected = this.value;
@@ -74,7 +145,6 @@ document.getElementById('category-filter').addEventListener('change', function()
         loadVoteFeed(selected);
     }
 });
-
 // Лента голосования с ❤️ и счётчиком (оптимизировано)
 function loadVoteFeed(categoryFilter = "") {
     let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
@@ -84,16 +154,13 @@ function loadVoteFeed(categoryFilter = "") {
         let feed = document.getElementById('vote-feed');
         feed.innerHTML = "";
         let fragment = document.createDocumentFragment(); // используем fragment для быстрой вставки
-
         data.forEach(photo => {
             let div = document.createElement('div');
             div.className = 'vote-item';
             div.dataset.id = photo.id; // id фото
-
             let img = document.createElement('img');
             img.src = '/static/uploads/' + photo.filename;
             div.appendChild(img);
-
             // Счётчик сверху
             let counter = document.createElement('div');
             counter.style.marginBottom = '5px';
@@ -101,7 +168,6 @@ function loadVoteFeed(categoryFilter = "") {
             counter.innerText = '0 ❤️';
             counter.className = 'vote-counter';
             div.appendChild(counter);
-
             // Кнопка ❤️
             let btnDiv = document.createElement('div');
             btnDiv.className = 'vote-buttons';
@@ -110,15 +176,12 @@ function loadVoteFeed(categoryFilter = "") {
             upBtn.className = 'vote-button';
             btnDiv.appendChild(upBtn);
             div.appendChild(btnDiv);
-
             fragment.appendChild(div);
         });
-
         feed.appendChild(fragment);
     })
     .catch(err => console.error('Ошибка загрузки голосования:', err));
 }
-
 // Делегирование кликов по ❤️
 document.getElementById('vote-feed').addEventListener('click', function(e){
     if(e.target.classList.contains('vote-button')){
@@ -134,7 +197,6 @@ document.getElementById('vote-feed').addEventListener('click', function(e){
         votedPhotos[photoId] = true;
     }
 });
-
 // Инициализация
 window.onload = function() {
     loadGallery();
