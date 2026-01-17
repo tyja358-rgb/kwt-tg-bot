@@ -1,62 +1,44 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, render_template, request, jsonify
 import os
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-
-# Папка для загрузок
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Хранилище фото (для теста, в проде лучше база данных)
+# Список фото и голосов (в памяти)
 photos = []
-photo_id_counter = 1
+votes = {}
 
+# Главная страница
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Загрузка фото
 @app.route('/upload', methods=['POST'])
-def upload():
-    global photo_id_counter
+def upload_photo():
     if 'photo' not in request.files:
-        return jsonify({'status': 'error', 'message': 'Нет файла'}), 400
+        return jsonify({'status': 'error', 'message': 'Нет файла'})
     file = request.files['photo']
+    category = request.form.get('category', 'Без категории')
+    username = request.form.get('username', 'Аноним')
     if file.filename == '':
-        return jsonify({'status': 'error', 'message': 'Файл не выбран'}), 400
-    
+        return jsonify({'status': 'error', 'message': 'Пустой файл'})
     filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    
-    # Добавляем фото в "базу"
-    photo = {
-        'id': photo_id_counter,
-        'filename': filename,
-        'category': request.form.get('category', 'Не указано'),
-        'username': request.form.get('username', 'Аноним'),
-        'votes': 0
-    }
-    photos.append(photo)
-    photo_id_counter += 1
-    
-    return jsonify({'status': 'ok', 'photo_id': photo['id']})
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    photo_id = len(photos)
+    photos.append({'id': photo_id, 'filename': filename, 'category': category, 'username': username})
+    votes[photo_id] = 0
+    return jsonify({'status': 'ok', 'photo_id': photo_id})
 
-@app.route('/photos', defaults={'category': None})
+# Получение списка фото для ленты
+@app.route('/photos')
 @app.route('/photos/<category>')
-def get_photos(category):
-    if category:
-        filtered = [p for p in photos if p['category'] == category]
-    else:
-        filtered = photos
-    # Возвращаем только нужные поля
-    data = [{'id': p['id'], 'filename': p['filename'], 'votes': p['votes']} for p in filtered]
-    return jsonify(data)
-
-@app.route('/static/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+def get_photos(category=None):
+    result = [p for p in photos if (category in [None, '', p['category']])]
+    return jsonify(result)
 
 if __name__ == "__main__":
-    # Запуск локально на порту 5001
-    app.run(debug=True, port=5001)
+    app.run(debug=True)
