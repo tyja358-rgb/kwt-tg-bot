@@ -1,29 +1,87 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Pet Vote</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
+import json
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-<h2>Голосование за самое красивое домашнее животное</h2>
+TOKEN = "YOUR_BOT_TOKEN"  # ← сюда вставь токен от @BotFather
 
-<button onclick="addPhoto()">Добавить фото</button>
-<button onclick="vote()">Проголосовать</button>
+# Пути к данным
+PHOTOS_FILE = "data/photos.json"
+VOTES_FILE = "data/votes.json"
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+# Создаём файлы, если их нет
+os.makedirs("data", exist_ok=True)
 
-    function addPhoto() {
-        tg.sendData(JSON.stringify({ action: "add_photo" }));
-    }
+if not os.path.exists(PHOTOS_FILE):
+    with open(PHOTOS_FILE, "w") as f:
+        json.dump([], f)
 
-    function vote() {
-        tg.sendData(JSON.stringify({ action: "vote" }));
-    }
-</script>
+if not os.path.exists(VOTES_FILE):
+    with open(VOTES_FILE, "w") as f:
+        json.dump({}, f)
 
-</body>
-</html>
+# Команда /start — кнопка для открытия Mini App
+async def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [InlineKeyboardButton(
+            "Открыть Mini App",
+            web_app=WebAppInfo(url="https://moldova2026.pythonanywhere.com/webapp/index.html")
+        )]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Открой Mini App:", reply_markup=reply_markup)
+
+# Обработка данных от Mini App
+async def handle_webapp_data(update: Update, context: CallbackContext):
+    data = json.loads(update.message.web_app_data.data)
+    action = data.get("action")
+
+    if action == "add_photo":
+        await update.message.reply_text("Отправь фото своего питомца прямо сюда в чат.")
+    elif action == "vote":
+        # Показываем последнее фото
+        with open(PHOTOS_FILE, "r") as f:
+            photos = json.load(f)
+        if not photos:
+            await update.message.reply_text("Пока нет фото для голосования.")
+            return
+        last_photo = photos[-1]
+        keyboard = [[InlineKeyboardButton("Проголосовать", callback_data="vote_yes")]]
+        await update.message.reply_photo(
+            photo=last_photo["file_id"],
+            caption="Нравится это животное?",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+# Получение фото от пользователя
+async def receive_photo(update: Update, context: CallbackContext):
+    user = update.message.from_user
+    photo = update.message.photo[-1]
+    file_id = photo.file_id
+
+    with open(PHOTOS_FILE, "r") as f:
+        photos = json.load(f)
+
+    photos.append({
+        "user_id": user.id,
+        "username": user.username,
+        "file_id": file_id
+    })
+
+    with open(PHOTOS_FILE, "w") as f:
+        json.dump(photos, f, indent=2)
+
+    await update.message.reply_text("Фото добавлено в голосование!")
+
+# Главная функция
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_data))
+    app.add_handler(MessageHandler(filters.PHOTO, receive_photo))
+
+    print("Бот запущен...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
