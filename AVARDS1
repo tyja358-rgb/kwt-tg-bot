@@ -1,133 +1,294 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moldova Animal Awards 2026</title>
-<style>
-body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; margin:0; padding:0; display:flex; flex-direction:column; align-items:center;}
-header { background:#ff6b81; color:white; width:100%; padding:15px; text-align:center; font-size:1.5em; font-weight:bold; box-shadow:0 3px 6px rgba(0,0,0,0.1);}
-.category-filter { margin:15px 0; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
-.category-filter button { background:#fff; border:2px solid #ff6b81; color:#ff6b81; border-radius:25px; padding:8px 16px; font-weight:bold; cursor:pointer; transition: all 0.3s ease;}
-.category-filter button:hover { background:#ff6b81; color:white;}
-.vote-feed { display:flex; flex-direction:column; gap:20px; width:95%; max-width:400px; margin-bottom:20px;}
-.vote-item { background:white; border-radius:15px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1); text-align:center; transition: transform 0.2s;}
-.vote-item:hover { transform: scale(1.02);}
-.vote-item img { width:100%; display:block;}
-.vote-buttons { display:flex; justify-content:center; align-items:center; padding:10px; gap:10px;}
-.vote-buttons button { font-size:1.2em; background:#ff6b81; color:white; border:none; border-radius:50%; width:50px; height:50px; cursor:pointer; transition:all 0.2s;}
-.vote-buttons button:hover { transform:scale(1.2);}
-.vote-counter { font-weight:bold; font-size:1.2em; margin-bottom:5px;}
-#upload-section { display:none; margin-top:20px;}
-</style>
-</head>
-<body>
-<header>Moldova Animal Awards 2026</header>
-
-<div class="category-filter">
-    <button onclick="selectCategory('Домашние питомцы')">🐶 Домашние питомцы</button>
-    <button onclick="selectCategory('Фермерские животные')">🐄 Фермерские животные</button>
-    <button onclick="selectCategory('Экзотические')">🐾 Экзотические</button>
-    <button onclick="selectCategory('Гран-при')">👑 Гран-при</button>
-    <button onclick="selectCategory('Приз зрительских симпатий')">❤️ Приз зрительских симпатий</button>
-</div>
-
-<div id="upload-section">
-    <h2>Загрузите фото вашего животного</h2>
-    <form id="upload-form" enctype="multipart/form-data">
-        <input type="file" id="photo" accept="image/*" required><br><br>
-        <button type="submit">Загрузить фото</button>
-    </form>
-    <p id="message"></p>
-</div>
-
-<div id="vote-feed" class="vote-feed"></div>
-
-<script>
-let selectedCategory = "";
-let username = "Аноним";
-let votedPhotos = {};
-
-function selectCategory(category){
-    selectedCategory = category;
-    document.getElementById("upload-section").style.display = "block";
-    alert("Вы выбрали: " + category);
-}
-
-document.getElementById('upload-form').addEventListener('submit', function(e){
-    e.preventDefault();
-    let fileInput = document.getElementById('photo');
-    let file = fileInput.files[0];
-    if(!file) return alert("Выберите файл!");
-    let formData = new FormData();
-    formData.append('photo', file);
-    formData.append('category', selectedCategory);
-    formData.append('username', username);
-    fetch('/upload', { method:'POST', body: formData })
-    .then(res=>res.json())
-    .then(data=>{
-        if(data.status==='ok'){
-            document.getElementById('message').innerText="Фото успешно загружено! ID: "+data.photo_id;
-            fileInput.value="";
-            loadVoteFeed();
-        } else {
-            document.getElementById('message').innerText="Ошибка: "+data.message;
-        }
-    }).catch(err=>{
-        console.error(err);
-        document.getElementById('message').innerText="Ошибка сети.";
-    });
-});
-
-function loadVoteFeed(categoryFilter=""){
-    let url = categoryFilter ? '/photos/' + encodeURIComponent(categoryFilter) : '/photos';
-    fetch(url)
-    .then(res=>res.json())
-    .then(data=>{
-        let feed = document.getElementById('vote-feed');
-        feed.innerHTML="";
-        let fragment = document.createDocumentFragment();
-        data.forEach(photo=>{
-            let div = document.createElement('div');
-            div.className='vote-item';
-            div.dataset.id=photo.id;
-
-            let img = document.createElement('img');
-            img.src='/static/uploads/' + photo.filename;
-            div.appendChild(img);
-
-            let counter = document.createElement('div');
-            counter.className='vote-counter';
-            counter.innerText='0 ❤️';
-            div.appendChild(counter);
-
-            let btnDiv = document.createElement('div');
-            btnDiv.className='vote-buttons';
-            let upBtn = document.createElement('button');
-            upBtn.innerText='❤️';
-            upBtn.className='vote-button';
-            btnDiv.appendChild(upBtn);
-            div.appendChild(btnDiv);
-
-            fragment.appendChild(div);
-        });
-        feed.appendChild(fragment);
-    }).catch(err=>console.error('Ошибка загрузки голосования:', err));
-}
-
-document.getElementById('vote-feed').addEventListener('click', function(e){
-    if(e.target.classList.contains('vote-button')){
-        let parent = e.target.closest('.vote-item');
-        let photoId = parent.dataset.id;
-        if(votedPhotos[photoId]){ alert("Вы уже голосовали за это фото!"); return;}
-        let counter = parent.querySelector('.vote-counter');
-        let count = parseInt(counter.innerText.split(' ')[0])+1;
-        counter.innerText = count+' ❤️';
-        votedPhotos[photoId]=true;
-    }
-});
-
-window.onload=function(){ loadVoteFeed(); };
-</script>
-</body>
-</html>
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __main__.cpython-39.pyc
+    │           │   │   │   ├── asyncio_test.cpython-39.pyc
+    │           │   │   │   ├── auth_test.cpython-39.pyc
+    │           │   │   │   ├── autoreload_test.cpython-39.pyc
+    │           │   │   │   ├── concurrent_test.cpython-39.pyc
+    │           │   │   │   ├── curl_httpclient_test.cpython-39.pyc
+    │           │   │   │   ├── escape_test.cpython-39.pyc
+    │           │   │   │   ├── gen_test.cpython-39.pyc
+    │           │   │   │   ├── http1connection_test.cpython-39.pyc
+    │           │   │   │   ├── httpclient_test.cpython-39.pyc
+    │           │   │   │   ├── httpserver_test.cpython-39.pyc
+    │           │   │   │   ├── httputil_test.cpython-39.pyc
+    │           │   │   │   ├── import_test.cpython-39.pyc
+    │           │   │   │   ├── ioloop_test.cpython-39.pyc
+    │           │   │   │   ├── iostream_test.cpython-39.pyc
+    │           │   │   │   ├── locale_test.cpython-39.pyc
+    │           │   │   │   ├── locks_test.cpython-39.pyc
+    │           │   │   │   ├── log_test.cpython-39.pyc
+    │           │   │   │   ├── netutil_test.cpython-39.pyc
+    │           │   │   │   ├── options_test.cpython-39.pyc
+    │           │   │   │   ├── process_test.cpython-39.pyc
+    │           │   │   │   ├── queues_test.cpython-39.pyc
+    │           │   │   │   ├── resolve_test_helper.cpython-39.pyc
+    │           │   │   │   ├── routing_test.cpython-39.pyc
+    │           │   │   │   ├── runtests.cpython-39.pyc
+    │           │   │   │   ├── simple_httpclient_test.cpython-39.pyc
+    │           │   │   │   ├── tcpclient_test.cpython-39.pyc
+    │           │   │   │   ├── tcpserver_test.cpython-39.pyc
+    │           │   │   │   ├── template_test.cpython-39.pyc
+    │           │   │   │   ├── testing_test.cpython-39.pyc
+    │           │   │   │   ├── twisted_test.cpython-39.pyc
+    │           │   │   │   ├── util.cpython-39.pyc
+    │           │   │   │   ├── util_test.cpython-39.pyc
+    │           │   │   │   ├── web_test.cpython-39.pyc
+    │           │   │   │   ├── websocket_test.cpython-39.pyc
+    │           │   │   │   └── wsgi_test.cpython-39.pyc
+    │           │   │   ├── asyncio_test.py
+    │           │   │   ├── auth_test.py
+    │           │   │   ├── autoreload_test.py
+    │           │   │   ├── concurrent_test.py
+    │           │   │   ├── csv_translations
+    │           │   │   │   └── fr_FR.csv
+    │           │   │   ├── curl_httpclient_test.py
+    │           │   │   ├── escape_test.py
+    │           │   │   ├── gen_test.py
+    │           │   │   ├── gettext_translations
+    │           │   │   │   └── fr_FR
+    │           │   │   │       └── LC_MESSAGES
+    │           │   │   │           ├── tornado_test.mo
+    │           │   │   │           └── tornado_test.po
+    │           │   │   ├── http1connection_test.py
+    │           │   │   ├── httpclient_test.py
+    │           │   │   ├── httpserver_test.py
+    │           │   │   ├── httputil_test.py
+    │           │   │   ├── import_test.py
+    │           │   │   ├── ioloop_test.py
+    │           │   │   ├── iostream_test.py
+    │           │   │   ├── locale_test.py
+    │           │   │   ├── locks_test.py
+    │           │   │   ├── log_test.py
+    │           │   │   ├── netutil_test.py
+    │           │   │   ├── options_test.cfg
+    │           │   │   ├── options_test.py
+    │           │   │   ├── options_test_types.cfg
+    │           │   │   ├── options_test_types_str.cfg
+    │           │   │   ├── process_test.py
+    │           │   │   ├── queues_test.py
+    │           │   │   ├── resolve_test_helper.py
+    │           │   │   ├── routing_test.py
+    │           │   │   ├── runtests.py
+    │           │   │   ├── simple_httpclient_test.py
+    │           │   │   ├── static
+    │           │   │   │   ├── dir
+    │           │   │   │   │   └── index.html
+    │           │   │   │   ├── robots.txt
+    │           │   │   │   ├── sample.xml
+    │           │   │   │   ├── sample.xml.bz2
+    │           │   │   │   └── sample.xml.gz
+    │           │   │   ├── static_foo.txt
+    │           │   │   ├── tcpclient_test.py
+    │           │   │   ├── tcpserver_test.py
+    │           │   │   ├── template_test.py
+    │           │   │   ├── templates
+    │           │   │   │   └── utf8.html
+    │           │   │   ├── test.crt
+    │           │   │   ├── test.key
+    │           │   │   ├── testing_test.py
+    │           │   │   ├── twisted_test.py
+    │           │   │   ├── util.py
+    │           │   │   ├── util_test.py
+    │           │   │   ├── web_test.py
+    │           │   │   ├── websocket_test.py
+    │           │   │   └── wsgi_test.py
+    │           │   ├── testing.py
+    │           │   ├── util.py
+    │           │   ├── web.py
+    │           │   ├── websocket.py
+    │           │   └── wsgi.py
+    │           ├── tornado-6.1.dist-info
+    │           │   ├── INSTALLER
+    │           │   ├── LICENSE
+    │           │   ├── METADATA
+    │           │   ├── RECORD
+    │           │   ├── WHEEL
+    │           │   └── top_level.txt
+    │           ├── typing_extensions-4.15.0.dist-info
+    │           │   ├── INSTALLER
+    │           │   ├── METADATA
+    │           │   ├── RECORD
+    │           │   ├── WHEEL
+    │           │   └── licenses
+    │           │       └── LICENSE
+    │           ├── typing_extensions.py
+    │           ├── tzlocal
+    │           │   ├── __init__.py
+    │           │   ├── __pycache__
+    │           │   │   ├── __init__.cpython-39.pyc
+    │           │   │   ├── unix.cpython-39.pyc
+    │           │   │   ├── utils.cpython-39.pyc
+    │           │   │   ├── win32.cpython-39.pyc
+    │           │   │   └── windows_tz.cpython-39.pyc
+    │           │   ├── py.typed
+    │           │   ├── unix.py
+    │           │   ├── utils.py
+    │           │   ├── win32.py
+    │           │   └── windows_tz.py
+    │           ├── tzlocal-5.3.1.dist-info
+    │           │   ├── INSTALLER
+    │           │   ├── LICENSE.txt
+    │           │   ├── METADATA
+    │           │   ├── RECORD
+    │           │   ├── WHEEL
+    │           │   └── top_level.txt
+    │           ├── werkzeug
+    │           │   ├── __init__.py
+    │           │   ├── __pycache__
+    │           │   │   ├── __init__.cpython-39.pyc
+    │           │   │   ├── _internal.cpython-39.pyc
+    │           │   │   ├── _reloader.cpython-39.pyc
+    │           │   │   ├── exceptions.cpython-39.pyc
+    │           │   │   ├── formparser.cpython-39.pyc
+    │           │   │   ├── http.cpython-39.pyc
+    │           │   │   ├── local.cpython-39.pyc
+    │           │   │   ├── security.cpython-39.pyc
+    │           │   │   ├── serving.cpython-39.pyc
+    │           │   │   ├── test.cpython-39.pyc
+    │           │   │   ├── testapp.cpython-39.pyc
+    │           │   │   ├── urls.cpython-39.pyc
+    │           │   │   ├── user_agent.cpython-39.pyc
+    │           │   │   ├── utils.cpython-39.pyc
+    │           │   │   └── wsgi.cpython-39.pyc
+    │           │   ├── _internal.py
+    │           │   ├── _reloader.py
+    │           │   ├── datastructures
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── accept.cpython-39.pyc
+    │           │   │   │   ├── auth.cpython-39.pyc
+    │           │   │   │   ├── cache_control.cpython-39.pyc
+    │           │   │   │   ├── csp.cpython-39.pyc
+    │           │   │   │   ├── etag.cpython-39.pyc
+    │           │   │   │   ├── file_storage.cpython-39.pyc
+    │           │   │   │   ├── headers.cpython-39.pyc
+    │           │   │   │   ├── mixins.cpython-39.pyc
+    │           │   │   │   ├── range.cpython-39.pyc
+    │           │   │   │   └── structures.cpython-39.pyc
+    │           │   │   ├── accept.py
+    │           │   │   ├── auth.py
+    │           │   │   ├── cache_control.py
+    │           │   │   ├── csp.py
+    │           │   │   ├── etag.py
+    │           │   │   ├── file_storage.py
+    │           │   │   ├── headers.py
+    │           │   │   ├── mixins.py
+    │           │   │   ├── range.py
+    │           │   │   └── structures.py
+    │           │   ├── debug
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── console.cpython-39.pyc
+    │           │   │   │   ├── repr.cpython-39.pyc
+    │           │   │   │   └── tbtools.cpython-39.pyc
+    │           │   │   ├── console.py
+    │           │   │   ├── repr.py
+    │           │   │   ├── shared
+    │           │   │   │   ├── ICON_LICENSE.md
+    │           │   │   │   ├── console.png
+    │           │   │   │   ├── debugger.js
+    │           │   │   │   ├── less.png
+    │           │   │   │   ├── more.png
+    │           │   │   │   └── style.css
+    │           │   │   └── tbtools.py
+    │           │   ├── exceptions.py
+    │           │   ├── formparser.py
+    │           │   ├── http.py
+    │           │   ├── local.py
+    │           │   ├── middleware
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── dispatcher.cpython-39.pyc
+    │           │   │   │   ├── http_proxy.cpython-39.pyc
+    │           │   │   │   ├── lint.cpython-39.pyc
+    │           │   │   │   ├── profiler.cpython-39.pyc
+    │           │   │   │   ├── proxy_fix.cpython-39.pyc
+    │           │   │   │   └── shared_data.cpython-39.pyc
+    │           │   │   ├── dispatcher.py
+    │           │   │   ├── http_proxy.py
+    │           │   │   ├── lint.py
+    │           │   │   ├── profiler.py
+    │           │   │   ├── proxy_fix.py
+    │           │   │   └── shared_data.py
+    │           │   ├── py.typed
+    │           │   ├── routing
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── converters.cpython-39.pyc
+    │           │   │   │   ├── exceptions.cpython-39.pyc
+    │           │   │   │   ├── map.cpython-39.pyc
+    │           │   │   │   ├── matcher.cpython-39.pyc
+    │           │   │   │   └── rules.cpython-39.pyc
+    │           │   │   ├── converters.py
+    │           │   │   ├── exceptions.py
+    │           │   │   ├── map.py
+    │           │   │   ├── matcher.py
+    │           │   │   └── rules.py
+    │           │   ├── sansio
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── http.cpython-39.pyc
+    │           │   │   │   ├── multipart.cpython-39.pyc
+    │           │   │   │   ├── request.cpython-39.pyc
+    │           │   │   │   ├── response.cpython-39.pyc
+    │           │   │   │   └── utils.cpython-39.pyc
+    │           │   │   ├── http.py
+    │           │   │   ├── multipart.py
+    │           │   │   ├── request.py
+    │           │   │   ├── response.py
+    │           │   │   └── utils.py
+    │           │   ├── security.py
+    │           │   ├── serving.py
+    │           │   ├── test.py
+    │           │   ├── testapp.py
+    │           │   ├── urls.py
+    │           │   ├── user_agent.py
+    │           │   ├── utils.py
+    │           │   ├── wrappers
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── request.cpython-39.pyc
+    │           │   │   │   └── response.cpython-39.pyc
+    │           │   │   ├── request.py
+    │           │   │   └── response.py
+    │           │   └── wsgi.py
+    │           ├── werkzeug-3.1.5.dist-info
+    │           │   ├── INSTALLER
+    │           │   ├── METADATA
+    │           │   ├── RECORD
+    │           │   ├── WHEEL
+    │           │   └── licenses
+    │           │       └── LICENSE.txt
+    │           ├── zipp
+    │           │   ├── __init__.py
+    │           │   ├── __pycache__
+    │           │   │   ├── __init__.cpython-39.pyc
+    │           │   │   ├── _functools.cpython-39.pyc
+    │           │   │   └── glob.cpython-39.pyc
+    │           │   ├── _functools.py
+    │           │   ├── compat
+    │           │   │   ├── __init__.py
+    │           │   │   ├── __pycache__
+    │           │   │   │   ├── __init__.cpython-39.pyc
+    │           │   │   │   ├── overlay.cpython-39.pyc
+    │           │   │   │   ├── py310.cpython-39.pyc
+    │           │   │   │   └── py313.cpython-39.pyc
+    │           │   │   ├── overlay.py
+    │           │   │   ├── py310.py
+    │           │   │   └── py313.py
+    │           │   └── glob.py
+    │           └── zipp-3.23.0.dist-info
+    │               ├── INSTALLER
+    │               ├── METADATA
+    │               ├── RECORD
+    │               ├── WHEEL
+    │               ├── licenses
+    │               │   └── LICENSE
+    │               └── top_level.txt
+    ├── lib64 -> lib
