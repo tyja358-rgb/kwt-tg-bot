@@ -1,44 +1,30 @@
-from flask import Flask, render_template, request, jsonify
-import os
-from werkzeug.utils import secure_filename
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
-app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"  # твой токен
 
-# Список фото и голосов (в памяти)
-photos = []
-votes = {}
+# Команда /start
+def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Открыть Moldova Animal",
+                web_app=WebAppInfo(url="http://127.0.0.1:5000/")  # локальный URL фронтенда
+            )
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(
+        "Добро пожаловать! Открывайте Moldova Animal через кнопку ниже:",
+        reply_markup=reply_markup
+    )
 
-# Главная страница
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-# Загрузка фото
-@app.route('/upload', methods=['POST'])
-def upload_photo():
-    if 'photo' not in request.files:
-        return jsonify({'status': 'error', 'message': 'Нет файла'})
-    file = request.files['photo']
-    category = request.form.get('category', 'Без категории')
-    username = request.form.get('username', 'Аноним')
-    if file.filename == '':
-        return jsonify({'status': 'error', 'message': 'Пустой файл'})
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-    photo_id = len(photos)
-    photos.append({'id': photo_id, 'filename': filename, 'category': category, 'username': username})
-    votes[photo_id] = 0
-    return jsonify({'status': 'ok', 'photo_id': photo_id})
-
-# Получение списка фото для ленты
-@app.route('/photos')
-@app.route('/photos/<category>')
-def get_photos(category=None):
-    result = [p for p in photos if (category in [None, '', p['category']])]
-    return jsonify(result)
+def main():
+    updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
+    dispatcher.add_handler(CommandHandler("start", start))
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    main()
