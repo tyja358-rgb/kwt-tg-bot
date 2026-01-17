@@ -1,1 +1,30 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pet Vote</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<h2>Голосование за самое красивое домашнее животное</h2>
+
+<button onclick="addPhoto()">Добавить фото</button>
+<button onclick="vote()">Проголосовать</button>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    function addPhoto() {
+        tg.sendData(JSON.stringify({ action: "add_photo" }));
+    }
+
+    function vote() {
+        tg.sendData(JSON.stringify({ action: "vote" }));
+    }
+</script>
+
+</body>
+</html>
