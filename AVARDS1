@@ -19,24 +19,22 @@
 
     /* Кнопка мультяшная лапка */
     .paw-btn {
-        width: 120px;
-        height: 120px;
-        background-image: url('https://i.imgur.com/3qQfKxF.png'); /* Замени на свою лапку PNG */
-        background-size: cover;
+        width: 150px;
+        height: 150px;
+        background-image: url('cat-paw.png'); /* Твоя PNG */
+        background-size: contain;
+        background-repeat: no-repeat;
         background-position: center;
         border: none;
         cursor: pointer;
-        border-radius: 50%;
-        box-shadow: 0 8px #b3865c, 0 0 20px rgba(0,0,0,0.2);
-        transition: transform 0.1s, box-shadow 0.1s;
+        transition: transform 0.1s;
         display: inline-block;
         margin-right: 30px;
     }
 
-    /* Эффект при нажатии */
+    /* Эффект нажатия */
     .paw-btn:active {
-        transform: translateY(4px) scale(0.95);
-        box-shadow: 0 4px #b3865c, 0 0 10px rgba(0,0,0,0.2);
+        transform: scale(0.95);
     }
 
     /* Кнопка Голосовать */
@@ -50,11 +48,11 @@
         font-weight: bold;
         cursor: pointer;
         box-shadow: 0 6px #b3865c;
-        transition: transform 0.1s, box-shadow 0.1s;
+        transition: transform 0.1s;
     }
     #voteBtn:active {
-        box-shadow: 0 3px #b3865c;
         transform: translateY(3px);
+        box-shadow: 0 3px #b3865c;
     }
 </style>
 </head>
@@ -62,7 +60,7 @@
 
 <h2>Голосование за самое красивое домашнее животное</h2>
 
-<!-- Кнопка мультяшная лапка -->
+<!-- Кнопка лапка -->
 <button class="paw-btn" id="addPhotoBtn"></button>
 
 <!-- Кнопка голосовать -->
