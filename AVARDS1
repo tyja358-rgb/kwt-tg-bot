@@ -1,87 +1,83 @@
-import json
-import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pet Vote</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #FFF8F0;
+        }
 
-TOKEN = "YOUR_BOT_TOKEN"  # ← сюда вставь токен от @BotFather
+        h2 {
+            color: #333;
+            margin-bottom: 40px;
+        }
 
-# Пути к данным
-PHOTOS_FILE = "data/photos.json"
-VOTES_FILE = "data/votes.json"
+        /* Кнопка "Добавить фото" в виде лапки */
+        #addPhotoBtn {
+            width: 120px;
+            height: 120px;
+            background-image: url('https://i.imgur.com/3qQfKxF.png'); /* Картинка лапки */
+            background-size: cover;
+            background-position: center;
+            background-color: transparent;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 6px #b3865c;
+            margin-right: 20px;
+        }
+        #addPhotoBtn:active {
+            box-shadow: 0 3px #b3865c;
+            transform: translateY(3px);
+        }
 
-# Создаём файлы, если их нет
-os.makedirs("data", exist_ok=True)
+        /* Кнопка "Голосовать" в виде заметки */
+        #voteBtn {
+            width: 200px;
+            height: 70px;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px #b3865c;
+        }
+        #voteBtn:active {
+            box-shadow: 0 3px #b3865c;
+            transform: translateY(3px);
+        }
+    </style>
+</head>
+<body>
 
-if not os.path.exists(PHOTOS_FILE):
-    with open(PHOTOS_FILE, "w") as f:
-        json.dump([], f)
+<h2>Голосование за самое красивое домашнее животное</h2>
 
-if not os.path.exists(VOTES_FILE):
-    with open(VOTES_FILE, "w") as f:
-        json.dump({}, f)
+<!-- Кнопки -->
+<button id="addPhotoBtn"></button>
+<button id="voteBtn">Голосовать</button>
 
-# Команда /start — кнопка для открытия Mini App
-async def start(update: Update, context: CallbackContext):
-    keyboard = [
-        [InlineKeyboardButton(
-            "Открыть Mini App",
-            web_app=WebAppInfo(url="https://moldova2026.pythonanywhere.com/webapp/index.html")
-        )]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Открой Mini App:", reply_markup=reply_markup)
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-# Обработка данных от Mini App
-async def handle_webapp_data(update: Update, context: CallbackContext):
-    data = json.loads(update.message.web_app_data.data)
-    action = data.get("action")
+    function addPhoto() {
+        tg.sendData(JSON.stringify({ action: "add_photo" }));
+    }
 
-    if action == "add_photo":
-        await update.message.reply_text("Отправь фото своего питомца прямо сюда в чат.")
-    elif action == "vote":
-        # Показываем последнее фото
-        with open(PHOTOS_FILE, "r") as f:
-            photos = json.load(f)
-        if not photos:
-            await update.message.reply_text("Пока нет фото для голосования.")
-            return
-        last_photo = photos[-1]
-        keyboard = [[InlineKeyboardButton("Проголосовать", callback_data="vote_yes")]]
-        await update.message.reply_photo(
-            photo=last_photo["file_id"],
-            caption="Нравится это животное?",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    function vote() {
+        tg.sendData(JSON.stringify({ action: "vote" }));
+    }
 
-# Получение фото от пользователя
-async def receive_photo(update: Update, context: CallbackContext):
-    user = update.message.from_user
-    photo = update.message.photo[-1]
-    file_id = photo.file_id
+    // Привязываем кнопки к функциям
+    document.getElementById("addPhotoBtn").onclick = addPhoto;
+    document.getElementById("voteBtn").onclick = vote;
+</script>
 
-    with open(PHOTOS_FILE, "r") as f:
-        photos = json.load(f)
-
-    photos.append({
-        "user_id": user.id,
-        "username": user.username,
-        "file_id": file_id
-    })
-
-    with open(PHOTOS_FILE, "w") as f:
-        json.dump(photos, f, indent=2)
-
-    await update.message.reply_text("Фото добавлено в голосование!")
-
-# Главная функция
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_data))
-    app.add_handler(MessageHandler(filters.PHOTO, receive_photo))
-
-    print("Бот запущен...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+</body>
+</html>
