@@ -17,20 +17,29 @@
         margin-bottom: 40px;
     }
 
-    /* SVG кнопка-лапка */
+    /* Кнопка мультяшная лапка */
     .paw-btn {
+        width: 120px;
+        height: 120px;
+        background-image: url('https://i.imgur.com/3qQfKxF.png'); /* Замени на свою лапку PNG */
+        background-size: cover;
+        background-position: center;
+        border: none;
         cursor: pointer;
-        width: 150px;
-        height: 150px;
+        border-radius: 50%;
+        box-shadow: 0 8px #b3865c, 0 0 20px rgba(0,0,0,0.2);
+        transition: transform 0.1s, box-shadow 0.1s;
+        display: inline-block;
         margin-right: 30px;
-        transition: transform 0.1s;
     }
 
+    /* Эффект при нажатии */
     .paw-btn:active {
-        transform: scale(0.95);
+        transform: translateY(4px) scale(0.95);
+        box-shadow: 0 4px #b3865c, 0 0 10px rgba(0,0,0,0.2);
     }
 
-    /* Кнопка голосовать */
+    /* Кнопка Голосовать */
     #voteBtn {
         width: 200px;
         height: 70px;
@@ -41,6 +50,7 @@
         font-weight: bold;
         cursor: pointer;
         box-shadow: 0 6px #b3865c;
+        transition: transform 0.1s, box-shadow 0.1s;
     }
     #voteBtn:active {
         box-shadow: 0 3px #b3865c;
@@ -52,13 +62,11 @@
 
 <h2>Голосование за самое красивое домашнее животное</h2>
 
-<!-- Кнопка лапка через SVG -->
-<svg class="paw-btn" viewBox="0 0 512 512" onclick="addPhoto()">
-    <path d="M256 512c-42.35 0-76.8-34.45-76.8-76.8s34.45-76.8 76.8-76.8 76.8 34.45 76.8 76.8-34.45 76.8-76.8 76.8zm-140-248c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm420 0c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm-330-80c-28.67 0-52-23.33-52-52s23.33-52 52-52 52 23.33 52 52-23.33 52-52 52zm200 0c-28.67 0-52-23.33-52-52s23.33-52 52-52 52 23.33 52 52-23.33 52-52 52z" fill="#FF6F61"/>
-</svg>
+<!-- Кнопка мультяшная лапка -->
+<button class="paw-btn" id="addPhotoBtn"></button>
 
-<!-- Кнопка "Голосовать" -->
-<button id="voteBtn" onclick="vote()">Голосовать</button>
+<!-- Кнопка голосовать -->
+<button id="voteBtn">Голосовать</button>
 
 <script>
     const tg = window.Telegram.WebApp;
@@ -71,6 +79,10 @@
     function vote() {
         tg.sendData(JSON.stringify({ action: "vote" }));
     }
+
+    // Привязываем функции к кнопкам
+    document.getElementById("addPhotoBtn").onclick = addPhoto;
+    document.getElementById("voteBtn").onclick = vote;
 </script>
 
 </body>
