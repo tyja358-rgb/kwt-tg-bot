@@ -13,7 +13,7 @@
         background-color: #FFF8F0;
     }
 
-    /* Новый заголовок с PNG вместо CSS-текста */
+    /* Заголовок через PNG */
     .festival-title {
         display: block;
         width: 90%;
@@ -66,7 +66,7 @@
 <body>
 
 <!-- Новый заголовок через PNG -->
-<img src="animal-fest-title.png" alt="Animal Fest Moldova 2026" class="festival-title">
+<img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
 
 <!-- Кнопки лапок -->
 <div class="paw-container">
