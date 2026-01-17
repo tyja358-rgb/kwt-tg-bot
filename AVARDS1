@@ -17,47 +17,28 @@
         margin-bottom: 40px;
     }
 
-    /* Кнопки лапок с прозрачным фоном */
     .paw-btn {
-        width: 140px;
-        height: 140px;
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
+        width: 120px;
+        height: 120px;
         border: none;
         cursor: pointer;
         transition: transform 0.1s;
         display: inline-block;
-        margin: 0 10px;
-
-        /* Сделать кнопку круглой, чтобы края квадрата не мешали */
+        margin: 0 20px;
+        background-color: transparent;
         border-radius: 50%;
-        overflow: hidden;
-        background-color: transparent; /* прозрачный фон */
+        overflow: visible; /* для SVG, чтобы не обрезались тени */
     }
 
     .paw-btn:active {
         transform: scale(0.95);
     }
 
-    /* Кнопка Голосовать */
-    #voteBtn {
-        width: 200px;
-        height: 70px;
-        background-color: #FFD700;
-        border: none;
-        border-radius: 12px;
-        font-size: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 6px #b3865c;
-        transition: transform 0.1s;
-        margin-top: 30px;
-    }
-
-    #voteBtn:active {
-        transform: translateY(3px);
-        box-shadow: 0 3px #b3865c;
+    /* Опционально: наводка */
+    .paw-btn:hover svg path,
+    .paw-btn:hover svg circle,
+    .paw-btn:hover svg ellipse {
+        fill-opacity: 0.8;
     }
 </style>
 </head>
@@ -65,28 +46,44 @@
 
 <h2>Голосование за самое красивое домашнее животное</h2>
 
-<!-- Кнопки лапок с прозрачным фоном -->
-<button class="paw-btn" id="paw1" style="background-image: url('png-clipart-love-and-cat-prints-cartoon-cat-cat-footprint-thumbnail.png');"></button>
-<button class="paw-btn" id="paw2" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+<!-- Кнопка Добавить фото -->
+<button class="paw-btn" id="addPhoto">
+  <svg width="120" height="120" viewBox="0 0 64 64">
+    <circle cx="20" cy="20" r="6" fill="#FF69B4"/>
+    <circle cx="44" cy="20" r="6" fill="#FF69B4"/>
+    <circle cx="32" cy="12" r="6" fill="#FF69B4"/>
+    <circle cx="12" cy="36" r="6" fill="#FF69B4"/>
+    <ellipse cx="32" cy="40" rx="16" ry="20" fill="#FF69B4"/>
+    <ellipse cx="32" cy="44" rx="16" ry="6" fill="rgba(0,0,0,0.2)"/>
+  </svg>
+</button>
 
-<!-- Кнопка голосовать -->
-<button id="voteBtn">Голосовать</button>
+<!-- Кнопка Голосовать -->
+<button class="paw-btn" id="vote">
+  <svg width="120" height="120" viewBox="0 0 64 64">
+    <circle cx="20" cy="20" r="6" fill="#FFD700"/>
+    <circle cx="44" cy="20" r="6" fill="#FFD700"/>
+    <circle cx="32" cy="12" r="6" fill="#FFD700"/>
+    <circle cx="12" cy="36" r="6" fill="#FFD700"/>
+    <ellipse cx="32" cy="40" rx="16" ry="20" fill="#FFD700"/>
+    <ellipse cx="32" cy="44" rx="16" ry="6" fill="rgba(0,0,0,0.2)"/>
+  </svg>
+</button>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    function addPhoto(pawId) {
-        tg.sendData(JSON.stringify({ action: "add_photo", paw: pawId }));
+    function addPhoto() {
+        tg.sendData(JSON.stringify({ action: "add_photo" }));
     }
 
     function vote() {
         tg.sendData(JSON.stringify({ action: "vote" }));
     }
 
-    document.getElementById("paw1").onclick = () => addPhoto("paw1");
-    document.getElementById("paw2").onclick = () => addPhoto("paw2");
-    document.getElementById("voteBtn").onclick = vote;
+    document.getElementById("addPhoto").onclick = addPhoto;
+    document.getElementById("vote").onclick = vote;
 </script>
 
 </body>
