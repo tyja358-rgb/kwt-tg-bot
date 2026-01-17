@@ -1,102 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Pet Vote</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 0;
-        padding: 50px 10px;
-        background-color: #FFF8F0;
-    }
-
-    h2 {
-        color: #333;
-        margin-bottom: 50px;
-    }
-
-    .paw-container {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 20px;
-    }
-
-    .paw-btn {
-        width: 40vw;  /* Кнопка занимает почти половину экрана */
-        max-width: 250px;
-        aspect-ratio: 1/1; /* Квадратная кнопка */
-        border: none;
-        cursor: pointer;
-        border-radius: 50%; /* Круглая */
-        overflow: hidden;
-        background-color: transparent;
-        background-size: cover;
-        background-position: center;
-        box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-        transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
-        position: relative;
-    }
-
-    /* Эффект подсветки при наведении */
-    .paw-btn:hover {
-        filter: brightness(1.2);
-        transform: translateY(-5px);
-        box-shadow: 0 15px 20px rgba(0,0,0,0.35);
-    }
-
-    /* Эффект нажатия */
-    .paw-btn:active {
-        transform: translateY(3px) scale(0.95);
-        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
-    }
-
-    .paw-label {
-        margin-top: 10px;
-        font-size: 18px;
-        font-weight: bold;
-        color: #333;
-    }
-</style>
-</head>
 <body>
 
-<h2>Голосование за самое красивое домашнее животное</h2>
+<!-- Новый объёмный заголовок -->
+<h1 class="festival-title">
+  <span>A</span><span>n</span><span>i</span><span>m</span><span>a</span><span>l</span> 
+  <span>F</span><span>e</span><span>s</span><span>t</span> 
+  <span>M</span><span>o</span><span>l</span><span>d</span><span>o</span><span>v</span><span>a</span> 
+  <span>2</span><span>0</span><span>2</span><span>6</span>
+</h1>
 
+<!-- Кнопки лапок остаются ниже -->
 <div class="paw-container">
-    <!-- Левая лапка -->
-    <div>
-        <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Добавить фото</div>
-    </div>
-
-    <!-- Правая лапка -->
-    <div>
-        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Голосовать</div>
-    </div>
+  <div>
+    <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+    <div class="paw-label">Добавить фото</div>
+  </div>
+  <div>
+    <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+    <div class="paw-label">Голосовать</div>
+  </div>
 </div>
-
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    function addPhoto() {
-        tg.sendData(JSON.stringify({ action: "add_photo" }));
-    }
-
-    function vote() {
-        tg.sendData(JSON.stringify({ action: "vote" }));
-    }
-
-    document.getElementById("addPhoto").onclick = addPhoto;
-    document.getElementById("vote").onclick = vote;
-</script>
-
-</body>
-</html>
