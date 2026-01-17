@@ -17,10 +17,10 @@
         margin-bottom: 40px;
     }
 
-    /* Кнопки лапок */
+    /* Кнопки лапок с прозрачным фоном */
     .paw-btn {
-        width: 120px;
-        height: 120px;
+        width: 140px;
+        height: 140px;
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
@@ -28,14 +28,19 @@
         cursor: pointer;
         transition: transform 0.1s;
         display: inline-block;
-        margin-right: 15px;
+        margin: 0 10px;
+
+        /* Сделать кнопку круглой, чтобы края квадрата не мешали */
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: transparent; /* прозрачный фон */
     }
 
     .paw-btn:active {
         transform: scale(0.95);
     }
 
-    /* Кнопка голосовать */
+    /* Кнопка Голосовать */
     #voteBtn {
         width: 200px;
         height: 70px;
@@ -60,7 +65,7 @@
 
 <h2>Голосование за самое красивое домашнее животное</h2>
 
-<!-- Кнопки лапок -->
+<!-- Кнопки лапок с прозрачным фоном -->
 <button class="paw-btn" id="paw1" style="background-image: url('png-clipart-love-and-cat-prints-cartoon-cat-cat-footprint-thumbnail.png');"></button>
 <button class="paw-btn" id="paw2" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
 
@@ -79,7 +84,6 @@
         tg.sendData(JSON.stringify({ action: "vote" }));
     }
 
-    // Привязка кнопок к функциям
     document.getElementById("paw1").onclick = () => addPhoto("paw1");
     document.getElementById("paw2").onclick = () => addPhoto("paw2");
     document.getElementById("voteBtn").onclick = vote;
