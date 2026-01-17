@@ -63,7 +63,6 @@
 <!-- Кнопки лапок -->
 <button class="paw-btn" id="paw1" style="background-image: url('png-clipart-love-and-cat-prints-cartoon-cat-cat-footprint-thumbnail.png');"></button>
 <button class="paw-btn" id="paw2" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
-<button class="paw-btn" id="paw3" style="background-image: url('your-third-file.jpeg');"></button>
 
 <!-- Кнопка голосовать -->
 <button id="voteBtn">Голосовать</button>
@@ -83,8 +82,6 @@
     // Привязка кнопок к функциям
     document.getElementById("paw1").onclick = () => addPhoto("paw1");
     document.getElementById("paw2").onclick = () => addPhoto("paw2");
-    document.getElementById("paw3").onclick = () => addPhoto("paw3");
-
     document.getElementById("voteBtn").onclick = vote;
 </script>
 
