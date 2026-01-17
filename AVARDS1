@@ -8,37 +8,59 @@
     body {
         font-family: Arial, sans-serif;
         text-align: center;
-        margin-top: 50px;
+        margin: 0;
+        padding: 50px 10px;
         background-color: #FFF8F0;
     }
 
     h2 {
         color: #333;
-        margin-bottom: 40px;
+        margin-bottom: 50px;
+    }
+
+    .paw-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 20px;
     }
 
     .paw-btn {
-        width: 120px;
-        height: 120px;
+        width: 40vw;  /* Кнопка занимает почти половину экрана */
+        max-width: 250px;
+        aspect-ratio: 1/1; /* Квадратная кнопка */
         border: none;
         cursor: pointer;
-        transition: transform 0.1s;
-        display: inline-block;
-        margin: 0 20px;
+        border-radius: 50%; /* Круглая */
+        overflow: hidden;
         background-color: transparent;
-        border-radius: 50%;
-        overflow: visible;
+        background-size: cover;
+        background-position: center;
+        box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+        transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+        position: relative;
     }
 
+    /* Эффект подсветки при наведении */
+    .paw-btn:hover {
+        filter: brightness(1.2);
+        transform: translateY(-5px);
+        box-shadow: 0 15px 20px rgba(0,0,0,0.35);
+    }
+
+    /* Эффект нажатия */
     .paw-btn:active {
-        transform: scale(0.95);
+        transform: translateY(3px) scale(0.95);
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
     }
 
-    /* Hover эффект для лёгкой анимации */
-    .paw-btn:hover svg path,
-    .paw-btn:hover svg circle,
-    .paw-btn:hover svg ellipse {
-        fill-opacity: 0.8;
+    .paw-label {
+        margin-top: 10px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
     }
 </style>
 </head>
@@ -46,35 +68,19 @@
 
 <h2>Голосование за самое красивое домашнее животное</h2>
 
-<!-- Кнопка Добавить фото (лапка в стиле Felix) -->
-<button class="paw-btn" id="addPhoto">
-  <svg width="120" height="120" viewBox="0 0 64 64">
-    <!-- Подушечки пальцев -->
-    <circle cx="22" cy="16" r="6" fill="#FF69B4"/>
-    <circle cx="42" cy="16" r="6" fill="#FF69B4"/>
-    <circle cx="32" cy="10" r="6" fill="#FF69B4"/>
-    <circle cx="12" cy="28" r="6" fill="#FF69B4"/>
-    <!-- Основная лапка -->
-    <ellipse cx="32" cy="36" rx="16" ry="20" fill="#FF69B4"/>
-    <!-- Тень для объёма -->
-    <ellipse cx="32" cy="40" rx="16" ry="6" fill="rgba(0,0,0,0.2)"/>
-  </svg>
-</button>
+<div class="paw-container">
+    <!-- Левая лапка -->
+    <div>
+        <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Добавить фото</div>
+    </div>
 
-<!-- Кнопка Голосовать (лапка золотая, как мультяшный стиль) -->
-<button class="paw-btn" id="vote">
-  <svg width="120" height="120" viewBox="0 0 64 64">
-    <!-- Подушечки пальцев -->
-    <circle cx="22" cy="16" r="6" fill="#FFD700"/>
-    <circle cx="42" cy="16" r="6" fill="#FFD700"/>
-    <circle cx="32" cy="10" r="6" fill="#FFD700"/>
-    <circle cx="12" cy="28" r="6" fill="#FFD700"/>
-    <!-- Основная лапка -->
-    <ellipse cx="32" cy="36" rx="16" ry="20" fill="#FFD700"/>
-    <!-- Тень для объёма -->
-    <ellipse cx="32" cy="40" rx="16" ry="6" fill="rgba(0,0,0,0.2)"/>
-  </svg>
-</button>
+    <!-- Правая лапка -->
+    <div>
+        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Голосовать</div>
+    </div>
+</div>
 
 <script>
     const tg = window.Telegram.WebApp;
