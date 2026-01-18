@@ -23,7 +23,7 @@
         background-color: #FFF8F0;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        justify-content: flex-start; /* картинка у верха */
         align-items: center;
         z-index: 9999;
         opacity: 0;
@@ -31,10 +31,11 @@
     }
 
     #splash img {
-        width: auto;
-        height: 80vh;
-        max-width: 100%;
-        object-fit: contain;
+        width: 100%;       /* растянуть по ширине экрана */
+        height: auto;      /* сохраняем пропорции */
+        max-height: 100vh; /* не выше экрана */
+        object-fit: cover; /* заполнение по ширине */
+        display: block;    /* убираем нижние пробелы */
     }
 
     /* Блок спонсоров внутри заставки */
@@ -146,7 +147,7 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Показ заставки с плавной анимацией: 1 сек появления, 3 сек на экране, 1 сек исчезновения
+// Показ заставки с анимацией: 1 сек появления, 3 сек видимости, 1 сек исчезновения
 setTimeout(() => {
     const splash = document.getElementById("splash");
     splash.style.animation = "fadeOut 1s forwards";
