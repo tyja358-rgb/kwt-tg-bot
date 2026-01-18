@@ -13,6 +13,43 @@
         background-color: #FFF8F0;
     }
 
+    /* ЗАСТАВКА НА ВЕСЬ ЭКРАН */
+    #splash {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #FFF8F0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        animation: fadeIn 1s forwards;
+    }
+
+    #splash img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+
+    /* Основной контент скрыт до окончания заставки */
+    #main-content {
+        display: none;
+    }
+
     /* Заголовок через PNG */
     .festival-title {
         display: block;
@@ -34,10 +71,10 @@
     .paw-btn {
         width: 40vw;  /* Кнопка почти половину экрана */
         max-width: 250px;
-        aspect-ratio: 1/1; 
+        aspect-ratio: 1/1;
         border: none;
         cursor: pointer;
-        border-radius: 50%; 
+        border-radius: 50%;
         overflow: hidden;
         background-color: transparent;
         background-size: cover;
@@ -65,35 +102,52 @@
 </head>
 <body>
 
-<!-- Новый заголовок через PNG -->
-<img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
+<!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
+<div id="splash">
+    <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026">
+</div>
 
-<!-- Кнопки лапок -->
-<div class="paw-container">
-  <div>
-    <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
-    <div class="paw-label">Добавить фото</div>
-  </div>
-  <div>
-    <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
-    <div class="paw-label">Голосовать</div>
-  </div>
+<!-- Основной контент -->
+<div id="main-content">
+    <!-- Заголовок через PNG -->
+    <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
+
+    <!-- Кнопки лапок -->
+    <div class="paw-container">
+      <div>
+        <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Добавить фото</div>
+      </div>
+      <div>
+        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Голосовать</div>
+      </div>
+    </div>
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-    function addPhoto() {
-        tg.sendData(JSON.stringify({ action: "add_photo" }));
-    }
+// Показ заставки 3 секунды, потом плавно скрываем
+setTimeout(() => {
+    const splash = document.getElementById("splash");
+    splash.style.animation = "fadeOut 1s forwards";
+    setTimeout(() => {
+        splash.style.display = "none";
+        document.getElementById("main-content").style.display = "block";
+    }, 1000);
+}, 3000);
 
-    function vote() {
-        tg.sendData(JSON.stringify({ action: "vote" }));
-    }
-
-    document.getElementById("addPhoto").onclick = addPhoto;
-    document.getElementById("vote").onclick = vote;
+// Функции кнопок
+function addPhoto() {
+    tg.sendData(JSON.stringify({ action: "add_photo" }));
+}
+function vote() {
+    tg.sendData(JSON.stringify({ action: "vote" }));
+}
+document.getElementById("addPhoto").onclick = addPhoto;
+document.getElementById("vote").onclick = vote;
 </script>
 
 </body>
