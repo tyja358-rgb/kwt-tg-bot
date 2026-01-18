@@ -20,27 +20,26 @@
         left: 0;
         width: 100%;
         height: 100vh;
-        background-color: #6A0DAD; /* фиолетовый фон */
+        background-color: #6A0DAD;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start; /* картинка у верха */
+        justify-content: flex-start;
         align-items: center;
         z-index: 9999;
         opacity: 0;
         animation: fadeIn 1s forwards;
     }
 
-    /* Круглая картинка с фоном */
     .splash-bg {
         position: relative;
         width: 220px;
         height: 220px;
-        background-color: #FFF;  /* цвет вокруг картинки */
-        border-radius: 50%;      /* круглая обёртка */
+        background-color: #FFF;
+        border-radius: 50%;
         display: flex;
         justify-content: center;
         align-items: center;
-        background-image: url('cow_pattern.png'); /* пятнистый фон */
+        background-image: url('cow_pattern.png');
         background-size: cover;
         margin-top: 20px;
     }
@@ -50,22 +49,20 @@
         height: 200px;
         object-fit: cover;
         border-radius: 50%;
-        border: 5px solid #111; /* рамка вокруг картинки */
+        border: 5px solid #111;
     }
 
-    /* Надпись "Спонсоры и партнёры" */
     #splash .partners-title {
         margin-top: 10px;
         font-size: 26px;
         font-weight: bold;
-        color: #FFD700; /* золотой цвет */
+        color: #FFD700;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         background-color: rgba(0,0,0,0.2); 
         padding: 6px 12px;
         border-radius: 6px;
     }
 
-    /* Блок спонсоров под надписью */
     #splash .sponsors {
         margin-top: 40px;
         display: flex;
@@ -73,7 +70,6 @@
         gap: 30px;
     }
 
-    /* Кнопки спонсоров без подсветки */
     #splash .sponsors div {
         background-color: rgba(17,17,17,0.95);
         color: #FFD700;
@@ -91,10 +87,8 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-    /* Основной контент скрыт до окончания заставки */
     #main-content { display: none; padding-top: 10px; }
 
-    /* Заголовок через PNG */
     .festival-title {
         display: block;
         width: 90%;
@@ -102,15 +96,19 @@
         margin: 0 auto 20px auto;
     }
 
-    /* Кнопки лапок */
     .paw-container {
         display: flex;
-        justify-content: space-around;
-        align-items: center;
-        width: 100%;
         flex-wrap: wrap;
-        gap: 20px;
+        justify-content: space-around;
+        align-items: flex-start;
+        gap: 40px; /* увеличим немного для вертикальной группы */
         margin-top: 20px;
+    }
+    .paw-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px; /* расстояние между кнопкой и новой под ней */
     }
     .paw-btn {
         width: 40vw;
@@ -141,12 +139,12 @@
         font-size: 18px;
         font-weight: bold;
         color: #333;
+        text-align: center;
     }
 </style>
 </head>
 <body>
 
-<!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
 <div id="splash">
     <div class="splash-bg">
         <img src="Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
@@ -158,27 +156,22 @@
     </div>
 </div>
 
-<!-- Основной контент -->
 <div id="main-content">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
 
     <div class="paw-container">
-      <!-- Существующие кнопки -->
-      <div>
+      <!-- Левая колонка -->
+      <div class="paw-group">
         <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
         <div class="paw-label">Добавить фото</div>
-      </div>
-      <div>
-        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata де gato♡•°.jpeg');"></button>
-        <div class="paw-label">Голосовать</div>
-      </div>
-
-      <!-- Новые кнопки -->
-      <div>
         <button class="paw-btn" id="increaseRating" style="background-image: url('Синяя лапка.jpeg');"></button>
         <div class="paw-label">Подними свой рейтинг</div>
       </div>
-      <div>
+
+      <!-- Правая колонка -->
+      <div class="paw-group">
+        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Голосовать</div>
         <button class="paw-btn" id="increaseFund" style="background-image: url('Синяя лапка.jpeg');"></button>
         <div class="paw-label">Увеличь сумму розового фонда</div>
       </div>
@@ -194,7 +187,6 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Показ заставки с плавной анимацией: 1 сек появления, 3 сек на экране, 1 сек исчезновения
 setTimeout(() => {
     const splash = document.getElementById("splash");
     splash.style.animation = "fadeOut 1s forwards";
@@ -204,7 +196,6 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
-// Функции кнопок
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
