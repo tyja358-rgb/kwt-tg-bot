@@ -40,7 +40,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background-image: url('cow_pattern.png'); /* пятнистый фон, если хочешь */
+        background-image: url('cow_pattern.png'); /* пятнистый фон */
         background-size: cover;
         margin-top: 20px;
     }
@@ -59,8 +59,7 @@
         font-size: 26px;
         font-weight: bold;
         color: #FFD700; /* золотой цвет */
-        text-shadow:
-            2px 2px 4px rgba(0,0,0,0.6);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         background-color: rgba(0,0,0,0.2); 
         padding: 6px 12px;
         border-radius: 6px;
@@ -68,16 +67,16 @@
 
     /* Блок спонсоров под надписью */
     #splash .sponsors {
-        margin-top: 40px; /* примерно 4 см */
+        margin-top: 40px;
         display: flex;
         justify-content: center;
         gap: 30px;
     }
 
-    /* Кнопки спонсоров без анимации */
+    /* Кнопки спонсоров без подсветки */
     #splash .sponsors div {
-        background-color: rgba(17,17,17,0.95); /* карбон фон с прозрачностью */
-        color: #FFD700; /* золотые буквы */
+        background-color: rgba(17,17,17,0.95);
+        color: #FFD700;
         font-weight: bold;
         font-size: 20px;
         padding: 9px 19px;
@@ -86,7 +85,7 @@
         cursor: default;
         display: inline-block;
         white-space: nowrap;
-        text-shadow: none; /* убрали подсветку */
+        text-shadow: none;
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -164,13 +163,24 @@
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
 
     <div class="paw-container">
+      <!-- Существующие кнопки -->
       <div>
         <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
         <div class="paw-label">Добавить фото</div>
       </div>
       <div>
-        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata де gato♡•°.jpeg');"></button>
         <div class="paw-label">Голосовать</div>
+      </div>
+
+      <!-- Новые кнопки -->
+      <div>
+        <button class="paw-btn" id="increaseRating" style="background-image: url('Синяя лапка.jpeg');"></button>
+        <div class="paw-label">Подними свой рейтинг</div>
+      </div>
+      <div>
+        <button class="paw-btn" id="increaseFund" style="background-image: url('Синяя лапка.jpeg');"></button>
+        <div class="paw-label">Увеличь сумму розового фонда</div>
       </div>
     </div>
 
@@ -197,8 +207,13 @@ setTimeout(() => {
 // Функции кнопок
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
+function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
+function increaseFund() { tg.sendData(JSON.stringify({ action: "increase_fund" })); }
+
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
+document.getElementById("increaseRating").onclick = increaseRating;
+document.getElementById("increaseFund").onclick = increaseFund;
 </script>
 
 </body>
