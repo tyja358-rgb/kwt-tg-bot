@@ -38,18 +38,18 @@
         display: block;    /* убираем нижние пробелы */
     }
 
-    /* Надпись "Спонсоры и партнёры" */
-    #splash .partners-title {
-        margin-top: 10px;
-        font-size: 26px;
-        font-weight: bold;
-        color: #FFD700; /* золотой цвет */
-        text-shadow:
-            2px 2px 4px rgba(0,0,0,0.6),
-            0 0 10px rgba(255, 215, 0, 0.7); /* glow эффект */
-        background-color: rgba(0,0,0,0.2); /* полупрозрачный фон */
-        padding: 6px 12px;
-        border-radius: 6px;
+    /* Надпись "Спонсоры и партнёры" - каждая буква отдельная */
+    #splash .partners-title span {
+        font-family: 'Arial Black', sans-serif;
+        font-size: 28px;
+        color: #111; /* графитовый цвет */
+        text-shadow: 2px 2px 4px rgba(255,255,255,0.3); /* легкая подсветка */
+        background-color: rgba(123, 63, 255, 0.3); /* фиолетовый полупрозрачный фон */
+        padding: 2px 4px;
+        margin: 0 1px;
+        display: inline-block;
+        transform: perspective(300px) rotateX(8deg); /* легкий объем */
+        border-radius: 3px;
     }
 
     /* Блок спонсоров под надписью */
@@ -57,20 +57,25 @@
         margin-top: 40px; /* примерно 4 см */
         display: flex;
         justify-content: center;
-        gap: 50px;
-        font-weight: bold;
+        gap: 10px; /* минимальный промежуток между буквами */
     }
 
     #splash .sponsors div {
+        display: flex;
+        gap: 2px;
+    }
+
+    #splash .sponsors div span {
+        font-family: 'Arial Black', sans-serif;
         font-size: 22px;
-        color: #FFFFFF;
+        color: #000; /* черные буквы */
         text-shadow:
-            2px 2px 5px rgba(0,0,0,0.7),
-            0 0 15px rgba(255,255,255,0.5); /* glow под буквами */
-        background: linear-gradient(45deg, #FF8C00, #FFD700); /* градиент */
-        padding: 6px 14px;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            1px 1px 2px rgba(255,255,255,0.5),
+            0 0 10px rgba(255, 255, 255, 0.3); /* glow */
+        background: linear-gradient(45deg, #7B3FFF, #FF8C00); /* фон с градиентом */
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -134,10 +139,27 @@
 <!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
 <div id="splash">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026">
-    <div class="partners-title">Спонсоры и партнёры</div>
+
+    <!-- Надпись "Спонсоры и партнёры" -->
+    <div class="partners-title">
+        <span>S</span><span>п</span><span>о</span><span>н</span><span>с</span><span>о</span><span>р</span><span>ы</span>
+        <span> </span>
+        <span>и</span>
+        <span> </span>
+        <span>п</span><span>а</span><span>р</span><span>т</span><span>н</span><span>ё</span><span>р</span><span>ы</span>
+    </div>
+
+    <!-- Спонсоры -->
     <div class="sponsors">
-        <div>AMBROS SRL</div>
-        <div>Zoomagazin.md</div>
+        <div>
+            <span>A</span><span>M</span><span>B</span><span>R</span><span>O</span><span>S</span>
+            <span> </span>
+            <span>S</span><span>R</span><span>L</span>
+        </div>
+        <div>
+            <span>Z</span><span>o</span><span>o</span><span>m</span><span>a</span><span>g</span>
+            <span>a</span><span>z</span><span>i</span><span>n</span><span>.</span><span>m</span><span>d</span>
+        </div>
     </div>
 </div>
 
