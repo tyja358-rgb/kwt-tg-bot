@@ -9,7 +9,7 @@
         font-family: Arial, sans-serif;
         text-align: center;
         margin: 0;
-        padding: 0; /* убрал 50px, чтобы картинка была прямо под потолком */
+        padding: 0;
         background-color: #FFF8F0;
     }
 
@@ -22,22 +22,23 @@
         height: 100vh;
         background-color: #FFF8F0;
         display: flex;
-        flex-direction: column; /* картинка + спонсоры в столбик */
-        justify-content: flex-start; /* картинка у верха */
-        align-items: center;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch; /* растягиваем картинку по ширине */
         z-index: 9999;
         opacity: 0;
         animation: fadeIn 1s forwards;
     }
 
     #splash img {
-        width: auto;
-        height: 100vh;
-        max-width: 100%;
+        width: 100%;       /* растягиваем по ширине экрана */
+        height: auto;      /* сохраняем пропорции */
+        max-height: 80vh;  /* не больше 80% экрана */
         object-fit: contain;
+        display: block;
     }
 
-    /* Спонсоры внутри заставки */
+    /* Блок спонсоров внутри заставки */
     #splash .sponsors {
         margin-top: 10px;
         font-size: 16px;
@@ -119,7 +120,7 @@
 <!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
 <div id="splash">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026">
-    <!-- Спонсоры теперь внутри заставки -->
+    <!-- Спонсоры внутри заставки -->
     <div class="sponsors">
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
@@ -148,7 +149,7 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Показ заставки: 1 сек появления, 3 сек на экране, 1 сек исчезновения
+// Показ заставки: 1 сек появления, 3 сек видимости, 1 сек исчезновения
 setTimeout(() => {
     const splash = document.getElementById("splash");
     splash.style.animation = "fadeOut 1s forwards";
