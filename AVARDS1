@@ -30,12 +30,27 @@
         animation: fadeIn 1s forwards;
     }
 
-    #splash img {
-        width: 100%;       
-        height: auto;      
-        max-height: 100vh; 
+    /* Круглая картинка с фоном */
+    .splash-bg {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        background-color: #FFF;  /* цвет вокруг картинки */
+        border-radius: 50%;      /* круглая обёртка */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-image: url('cow_pattern.png'); /* пятнистый фон, если хочешь */
+        background-size: cover;
+        margin-top: 20px;
+    }
+
+    .splash-img {
+        width: 200px;
+        height: 200px;
         object-fit: cover;
-        display: block;    
+        border-radius: 50%;
+        border: 5px solid #111; /* рамка вокруг картинки */
     }
 
     /* Надпись "Спонсоры и партнёры" */
@@ -165,7 +180,9 @@
 
 <!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
 <div id="splash">
-    <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026">
+    <div class="splash-bg">
+        <img src="Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
+    </div>
     <div class="partners-title">Спонсоры и партнёры</div>
     <div class="sponsors">
         <div id="sponsor1">AMBROS SRL</div>
