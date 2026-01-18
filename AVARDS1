@@ -62,11 +62,11 @@
 
     /* Кнопки спонсоров с эффектом glow по буквам */
     #splash .sponsors div {
-        background-color: #111111; /* карбон фон кнопки */
+        background-color: rgba(17,17,17,0.95); /* карбон фон с прозрачностью */
         color: #FFD700; /* золотые буквы */
         font-weight: bold;
-        font-size: 22px;
-        padding: 10px 20px;
+        font-size: 20px; /* уменьшили шрифт на ~5% */
+        padding: 9px 19px; /* уменьшили на 5% */
         border-radius: 10px;
         box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* объемность */
         cursor: default;
@@ -74,6 +74,7 @@
         text-shadow: 
             1px 1px 2px rgba(0,0,0,0.7),
             0 0 8px rgba(255,215,0,0.6); /* подсветка букв */
+        white-space: nowrap; /* чтобы текст не переносился */
     }
 
     /* Каждая буква */
