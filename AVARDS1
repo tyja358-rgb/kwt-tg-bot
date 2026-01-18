@@ -20,7 +20,7 @@
         left: 0;
         width: 100%;
         height: 100vh;
-        background-color: #FFF8F0;
+        background-color: #6A0DAD; /* фиолетовый фон */
         display: flex;
         flex-direction: column;
         justify-content: flex-start; /* картинка у верха */
@@ -62,8 +62,8 @@
 
     /* Кнопки спонсоров с эффектом glow по буквам */
     #splash .sponsors div {
-        background-color: #6A0DAD; /* фиолетовый фон */
-        color: #111; /* черный карбон текст */
+        background-color: #111111; /* карбон фон кнопки */
+        color: #FFD700; /* золотые буквы */
         font-weight: bold;
         font-size: 22px;
         padding: 10px 20px;
@@ -71,13 +71,16 @@
         box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* объемность */
         cursor: default;
         display: inline-block;
+        text-shadow: 
+            1px 1px 2px rgba(0,0,0,0.7),
+            0 0 8px rgba(255,215,0,0.6); /* подсветка букв */
     }
 
     /* Каждая буква */
     #splash .sponsors div span {
         display: inline-block;
         animation: glow 1.8s infinite alternate;
-        text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 12px #fff;
+        text-shadow: 0 0 4px #FFD700, 0 0 8px #FFD700, 0 0 12px #FFD700;
     }
 
     /* Задержка для каждой буквы, чтобы эффект шёл поочередно */
@@ -96,9 +99,9 @@
     #splash .sponsors div span:nth-child(13) { animation-delay: 1.2s; }
 
     @keyframes glow {
-        0% { text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 12px #fff; transform: translateY(0px);}
-        50% { text-shadow: 0 0 6px #fff, 0 0 12px #fff, 0 0 16px #fff; transform: translateY(-2px);}
-        100% { text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 12px #fff; transform: translateY(0px);}
+        0% { text-shadow: 0 0 4px #FFD700, 0 0 8px #FFD700, 0 0 12px #FFD700; transform: translateY(0px);}
+        50% { text-shadow: 0 0 6px #FFD700, 0 0 12px #FFD700, 0 0 16px #FFD700; transform: translateY(-2px);}
+        100% { text-shadow: 0 0 4px #FFD700, 0 0 8px #FFD700, 0 0 12px #FFD700; transform: translateY(0px);}
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
