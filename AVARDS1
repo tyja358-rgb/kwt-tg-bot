@@ -34,19 +34,43 @@
         width: 100%;       /* растянуть по ширине экрана */
         height: auto;      /* сохраняем пропорции */
         max-height: 100vh; /* не выше экрана */
-        object-fit: cover; /* заполнение по ширине */
+        object-fit: cover;
         display: block;    /* убираем нижние пробелы */
     }
 
-    /* Блок спонсоров внутри заставки */
-    #splash .sponsors {
+    /* Надпись "Спонсоры и партнёры" */
+    #splash .partners-title {
         margin-top: 10px;
-        font-size: 16px;
-        color: #555;
+        font-size: 26px;
+        font-weight: bold;
+        color: #FFD700; /* золотой цвет */
+        text-shadow:
+            2px 2px 4px rgba(0,0,0,0.6),
+            0 0 10px rgba(255, 215, 0, 0.7); /* glow эффект */
+        background-color: rgba(0,0,0,0.2); /* полупрозрачный фон */
+        padding: 6px 12px;
+        border-radius: 6px;
+    }
+
+    /* Блок спонсоров под надписью */
+    #splash .sponsors {
+        margin-top: 40px; /* примерно 4 см */
         display: flex;
         justify-content: center;
-        gap: 40px;
+        gap: 50px;
         font-weight: bold;
+    }
+
+    #splash .sponsors div {
+        font-size: 22px;
+        color: #FFFFFF;
+        text-shadow:
+            2px 2px 5px rgba(0,0,0,0.7),
+            0 0 15px rgba(255,255,255,0.5); /* glow под буквами */
+        background: linear-gradient(45deg, #FF8C00, #FFD700); /* градиент */
+        padding: 6px 14px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -103,8 +127,6 @@
         font-weight: bold;
         color: #333;
     }
-
-    .sponsors { margin-top: 20px; font-size: 16px; color: #555; display: flex; justify-content: center; gap: 40px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -112,19 +134,17 @@
 <!-- ЗАСТАВКА НА ВЕСЬ ЭКРАН -->
 <div id="splash">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026">
-    <!-- Спонсоры внутри заставки -->
+    <div class="partners-title">Спонсоры и партнёры</div>
     <div class="sponsors">
-        <div>Ambros SRL</div>
+        <div>AMBROS SRL</div>
         <div>Zoomagazin.md</div>
     </div>
 </div>
 
 <!-- Основной контент -->
 <div id="main-content">
-    <!-- Заголовок через PNG -->
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
 
-    <!-- Кнопки лапок -->
     <div class="paw-container">
       <div>
         <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
@@ -136,7 +156,6 @@
       </div>
     </div>
 
-    <!-- Спонсоры -->
     <div class="sponsors">
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
@@ -147,7 +166,7 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Показ заставки с анимацией: 1 сек появления, 3 сек видимости, 1 сек исчезновения
+// Показ заставки с плавной анимацией: 1 сек появления, 3 сек на экране, 1 сек исчезновения
 setTimeout(() => {
     const splash = document.getElementById("splash");
     splash.style.animation = "fadeOut 1s forwards";
