@@ -198,14 +198,18 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Разбиваем текст спонсоров на отдельные буквы
+// Разбиваем текст спонсоров на отдельные буквы, пробелы сохраняются
 function splitLetters(id) {
     const el = document.getElementById(id);
     const text = el.innerText;
     el.innerHTML = "";
     for (let char of text) {
         const span = document.createElement("span");
-        span.innerText = char;
+        if (char === " ") {
+            span.innerHTML = "&nbsp;"; // пробел видимый
+        } else {
+            span.innerText = char;
+        }
         el.appendChild(span);
     }
 }
