@@ -135,7 +135,7 @@
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
-        height: 40px; /* увеличена высота на ~10% от текста */
+        height: 28px; /* тоньше */
         margin: 10px auto 20px auto;
         background-color: #ccc;
         border-radius: 15px;
@@ -161,7 +161,7 @@
         width: 100%;
         text-align: center;
         top: 0;
-        line-height: 40px; /* совпадает с высотой бара */
+        line-height: 28px; /* совпадает с высотой бара */
         font-weight: bold;
         color: #000;
         pointer-events: none;
