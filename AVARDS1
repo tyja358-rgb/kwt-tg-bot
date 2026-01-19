@@ -131,17 +131,17 @@
         margin-top: 30px;
     }
 
-    /* Прогресс-бар */
+    /* Прогресс-бар основной фонд */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
-        height: 28px; /* тоньше */
+        height: 28px;
         margin: 10px auto 20px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
         position: relative;
-        border: 2px solid #00FF00; /* зелёная рамка */
+        border: 2px solid #00FF00;
         display: flex;
     }
     #prize-bar-fill {
@@ -161,7 +161,43 @@
         width: 100%;
         text-align: center;
         top: 0;
-        line-height: 28px; /* совпадает с высотой бара */
+        line-height: 28px;
+        font-weight: bold;
+        color: #000;
+        pointer-events: none;
+    }
+
+    /* Прогресс-бар помощь приютам */
+    #shelter-bar-container {
+        width: 90%;
+        max-width: 800px;
+        height: 28px;
+        margin: 10px auto 20px auto;
+        background-color: #ccc;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+        border: 2px solid #FF00FF;
+        display: flex;
+    }
+    #shelter-bar-fill {
+        display: flex;
+        height: 100%;
+        width: 100%;
+    }
+    #shelter-bar-fill span {
+        flex: 1;
+        border-right: 1px solid #ccc;
+        background-color: #FF69B4; /* ярко кислотно-розовый */
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    #shelter-bar-text {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 0;
+        line-height: 28px;
         font-weight: bold;
         color: #000;
         pointer-events: none;
@@ -180,9 +216,16 @@
     </div>
 </div>
 
+<!-- Основной призовой фонд -->
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
     <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
+</div>
+
+<!-- Бар помощь приютам -->
+<div id="shelter-bar-container">
+    <div id="shelter-bar-fill"></div>
+    <div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div>
 </div>
 
 <div id="main-content">
@@ -224,6 +267,7 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
+// Основной фонд
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
@@ -252,7 +296,30 @@ function increaseFund() {
     }
 }
 
-function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
+// Бар помощь приютам
+let shelterProgress = 0;
+const shelterBlocks = 20;
+
+function helpShelters() {
+    tg.sendData(JSON.stringify({ action: "help_shelters" }));
+
+    shelterProgress++;
+    if(shelterProgress > shelterBlocks){
+        shelterProgress = 0;
+        let shelter = document.getElementById("shelter-amount");
+        shelter.textContent = parseInt(shelter.textContent) + 1;
+    }
+
+    const fill = document.getElementById("shelter-bar-fill");
+    fill.innerHTML = '';
+    for(let i=0;i<shelterBlocks;i++){
+        const span = document.createElement('span');
+        if(i < shelterProgress){
+            setTimeout(()=>{span.style.opacity = '1';}, i*50);
+        }
+        fill.appendChild(span);
+    }
+}
 
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
