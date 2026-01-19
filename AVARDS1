@@ -10,16 +10,15 @@
         text-align: center;
         margin: 0;
         padding: 0;
-        background-color: #E9E8E6; /* фон вебаппа */
+        background-color: #E9E8E6;
     }
-    /* ЗАСТАВКА НА ВЕСЬ ЭКРАН */
     #splash {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100vh;
-        background-color: #6A0DAD; /* фиолетовый фон */
+        background-color: #6A0DAD;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
@@ -28,7 +27,6 @@
         opacity: 0;
         animation: fadeIn 1s forwards;
     }
-    /* Круглая картинка с фоном */
     .splash-bg {
         position: relative;
         width: 220px;
@@ -49,28 +47,25 @@
         border-radius: 50%;
         border: 5px solid #111;
     }
-    /* Надпись "Спонсоры и партнёры" */
     #splash .partners-title {
         margin-top: 10px;
         font-size: 26px;
         font-weight: bold;
-        color: #FFD700; /* золото */
+        color: #FFD700; 
         text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         background-color: rgba(0,0,0,0.2);
         padding: 6px 12px;
         border-radius: 6px;
     }
-    /* Блок спонсоров под надписью */
     #splash .sponsors {
         margin-top: 40px;
         display: flex;
         justify-content: center;
         gap: 30px;
     }
-    /* Кнопки спонсоров без анимации */
     #splash .sponsors div {
         background-color: rgba(17,17,17,0.95);
-        color: #FFD700; /* золото */
+        color: #FFD700;
         font-weight: bold;
         font-size: 20px;
         padding: 9px 19px;
@@ -127,31 +122,37 @@
         margin-top: 10px;
         font-size: 18px;
         font-weight: bold;
-        color: #000000; /* золото */
+        color: #000000;
     }
-    /* НОВЫЙ БЛОК ДЛЯ ЦЕНТРАЛЬНОЙ КНОПКИ СНИЗУ */
     .center-extra {
         display: flex;
         flex-direction: column;
         align-items: center;
         margin-top: 30px;
     }
-    /* ПРОГРЕСС-БАР ПРИЗОВОГО ФОНДА */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
         height: 30px;
-        margin: 10px auto;
+        margin: 10px auto 20px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
         position: relative;
+        display: flex;
     }
     #prize-bar-fill {
+        display: flex;
         height: 100%;
-        width: 50%; /* начальный прогресс */
-        background-color: #FFD700;
+        width: 0%;
         transition: width 0.3s;
+    }
+    #prize-bar-fill span {
+        flex: 1;
+        border-right: 1px solid #ccc;
+        background-color: #FFD700;
+        opacity: 0;
+        transition: opacity 0.3s;
     }
     #prize-bar-text {
         position: absolute;
@@ -161,6 +162,7 @@
         line-height: 30px;
         font-weight: bold;
         color: #000;
+        pointer-events: none;
     }
 </style>
 </head>
@@ -176,10 +178,9 @@
     </div>
 </div>
 
-<!-- ПРОГРЕСС-БАР СУПЕР ВЫШЕ -->
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
-    <div id="prize-bar-text">Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей</div>
+    <div id="prize-bar-text"><span id="prize-amount">20000</span> лей</div>
 </div>
 
 <div id="main-content">
@@ -224,19 +225,28 @@ function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
 
-// ФУНКЦИЯ ДЛЯ ПРОГРЕСС-БАРА
-function increaseFund() { 
-    tg.sendData(JSON.stringify({ action: "increase_fund" })); 
-    let prize = document.getElementById("prize-amount");
-    let current = parseInt(prize.textContent);
-    current += 5; // добавляем 5 лей
-    prize.textContent = current;
+let fundProgress = 0;
+const fundBlocks = 20;
 
-    // обновляем прогресс шкалы
-    let maxPrize = 40000; // максимальная сумма для 100%
-    let fill = document.getElementById("prize-bar-fill");
-    let percent = Math.min((current / maxPrize) * 100, 100);
-    fill.style.width = percent + "%";
+function increaseFund() {
+    tg.sendData(JSON.stringify({ action: "increase_fund" }));
+
+    fundProgress++;
+    if(fundProgress > fundBlocks){
+        fundProgress = 0;
+        let prize = document.getElementById("prize-amount");
+        prize.textContent = parseInt(prize.textContent) + 1;
+    }
+
+    const fill = document.getElementById("prize-bar-fill");
+    fill.innerHTML = '';
+    for(let i=0;i<fundBlocks;i++){
+        const span = document.createElement('span');
+        if(i < fundProgress){
+            setTimeout(()=>{span.style.opacity = '1';}, i*50); // анимация подсветки
+        }
+        fill.appendChild(span);
+    }
 }
 
 function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
