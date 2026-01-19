@@ -137,7 +137,7 @@
         width: 90%;
         max-width: 800px;
         height: 28px; 
-        margin: 10px auto 20px auto;
+        margin: 10px auto 5px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
@@ -179,6 +179,7 @@
         position: relative;
         border: 2px solid #FF1493; 
         display: flex;
+        margin: 5px auto 20px auto;
     }
     #shelter-bar-fill {
         display: flex;
@@ -216,9 +217,14 @@
     </div>
 </div>
 
+<!-- Бары сверху -->
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
     <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
+</div>
+<div id="shelter-bar-container">
+    <div id="shelter-bar-fill"></div>
+    <div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div>
 </div>
 
 <div id="main-content">
@@ -240,12 +246,6 @@
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
-
-        <!-- Второй бар -->
-        <div id="shelter-bar-container">
-            <div id="shelter-bar-fill"></div>
-            <div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div>
-        </div>
     </div>
     <div class="sponsors">
         <div>Ambros SRL</div>
