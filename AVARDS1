@@ -83,7 +83,7 @@
         display: block;
         width: 90%;
         max-width: 800px;
-        margin: 0 auto 20px auto;
+        margin: 60px auto 20px auto; /* сдвинули ниже, чтобы не перекрывали бары */
     }
     .paw-container {
         display: flex;
@@ -132,12 +132,12 @@
         gap: 20px;
     }
 
-    /* Прогресс-бар Призовой фонд - фиксированный сверху */
+    /* Прозрачные бары сверху */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
         height: 28px; 
-        background-color: #ccc;
+        background-color: transparent; /* прозрачный фон */
         border-radius: 15px;
         overflow: hidden;
         border: 2px solid #00FF00; 
@@ -172,19 +172,18 @@
         pointer-events: none;
     }
 
-    /* Прогресс-бар Помощь приютам - фиксированный сверху */
     #shelter-bar-container {
         width: 90%;
         max-width: 800px;
         height: 28px; 
-        background-color: #ccc;
+        background-color: transparent; /* прозрачный фон */
         border-radius: 15px;
         overflow: hidden;
         border: 2px solid #FF1493; 
         display: flex;
 
         position: fixed;
-        top: 40px; /* под первым баром */
+        top: 40px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 999;
