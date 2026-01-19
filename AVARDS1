@@ -83,7 +83,7 @@
         display: block;
         width: 90%;
         max-width: 800px;
-        margin: 60px auto 20px auto; /* сдвинули ниже, чтобы не перекрывали бары */
+        margin: 60px auto 20px auto;
     }
     .paw-container {
         display: flex;
@@ -109,15 +109,6 @@
         transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
         position: relative;
     }
-    .paw-btn:hover {
-        filter: brightness(1.2);
-        transform: translateY(-5px);
-        box-shadow: 0 15px 20px rgba(0,0,0,0.35);
-    }
-    .paw-btn:active {
-        transform: translateY(3px) scale(0.95);
-        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
-    }
     .paw-label {
         margin-top: 10px;
         font-size: 18px;
@@ -137,12 +128,11 @@
         width: 90%;
         max-width: 800px;
         height: 28px; 
-        background-color: transparent; /* прозрачный фон */
+        background-color: transparent;
         border-radius: 15px;
         overflow: hidden;
         border: 2px solid #00FF00; 
         display: flex;
-
         position: fixed;
         top: 5px;
         left: 50%;
@@ -176,12 +166,11 @@
         width: 90%;
         max-width: 800px;
         height: 28px; 
-        background-color: transparent; /* прозрачный фон */
+        background-color: transparent;
         border-radius: 15px;
         overflow: hidden;
         border: 2px solid #FF1493; 
         display: flex;
-
         position: fixed;
         top: 40px;
         left: 50%;
@@ -210,9 +199,36 @@
         color: #000;
         pointer-events: none;
     }
+
+    /* ======= НОВОЕ: ЛЕНТА ФОТО ======= */
+    #vote-feed {
+        width: 90%;
+        max-width: 800px;
+        margin: 20px auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .vote-photo {
+        width: 100%;
+        aspect-ratio: 1/1;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    }
+
+    /* скрытый input для выбора фото */
+    #photoInput {
+        display: none;
+    }
 </style>
 </head>
 <body>
+
+<!-- скрытое поле выбора фото -->
+<input type="file" id="photoInput" accept="image/*">
+
 <div id="splash">
     <div class="splash-bg">
         <img src="Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
@@ -250,10 +266,15 @@
         <div class="paw-label">Увеличь сумму призового фонда</div>
       </div>
     </div>
+
+    <!-- НОВОЕ: ЛЕНТА ДЛЯ ФОТО -->
+    <div id="vote-feed"></div>
+
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
     </div>
+
     <div class="sponsors">
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
@@ -273,7 +294,11 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
-function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
+/* ======= ИЗМЕНЁННАЯ ФУНКЦИЯ ADD PHOTO ======= */
+function addPhoto() {
+    document.getElementById("photoInput").click();
+}
+
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
 
@@ -324,6 +349,24 @@ function helpShelters() {
         fill.appendChild(span);
     }
 }
+
+/* ======= НОВОЕ: ОБРАБОТЧИК ВЫБОРА ФОТО ======= */
+document.getElementById("photoInput").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        img.className = "vote-photo";
+
+        document.getElementById("vote-feed").appendChild(img);
+    };
+
+    reader.readAsDataURL(file);
+});
 
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
