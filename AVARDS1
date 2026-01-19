@@ -1,3 +1,4 @@
+  GNU nano 6.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              /home/Moldova2026/webapp/index.html                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 <!DOCTYPE html>
 <html>
 <head>
@@ -51,7 +52,7 @@
         margin-top: 10px;
         font-size: 26px;
         font-weight: bold;
-        color: #FFD700; 
+        color: #FFD700;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         background-color: rgba(0,0,0,0.2);
         padding: 6px 12px;
@@ -130,7 +131,7 @@
         align-items: center;
         margin-top: 30px;
     }
-    #prize-bar-container {
+#prize-bar-container {
         width: 90%;
         max-width: 800px;
         height: 30px;
@@ -144,15 +145,15 @@
     #prize-bar-fill {
         display: flex;
         height: 100%;
-        width: 0%;
+        width: 0%;           /* начальный прогресс */
         transition: width 0.3s;
     }
     #prize-bar-fill span {
         flex: 1;
         border-right: 1px solid #ccc;
-        background-color: #FFD700;
-        opacity: 0;
-        transition: opacity 0.3s;
+        background-color: #FFD700;  /* цвет подсветки блоков */
+        opacity: 0;                  /* блок изначально невидимый */
+        transition: opacity 0.3s;    /* плавное появление */
     }
     #prize-bar-text {
         position: absolute;
@@ -177,12 +178,10 @@
         <div id="sponsor2">Zoomagazin.md</div>
     </div>
 </div>
-
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
     <div id="prize-bar-text"><span id="prize-amount">20000</span> лей</div>
 </div>
-
 <div id="main-content">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
     <div class="paw-container">
@@ -208,7 +207,6 @@
         <div>Zoomagazin.md</div>
     </div>
 </div>
-
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
@@ -220,24 +218,19 @@ setTimeout(() => {
         document.getElementById("main-content").style.display = "block";
     }, 1000);
 }, 4000);
-
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
-
 let fundProgress = 0;
 const fundBlocks = 20;
-
 function increaseFund() {
     tg.sendData(JSON.stringify({ action: "increase_fund" }));
-
     fundProgress++;
     if(fundProgress > fundBlocks){
         fundProgress = 0;
         let prize = document.getElementById("prize-amount");
         prize.textContent = parseInt(prize.textContent) + 1;
     }
-
     const fill = document.getElementById("prize-bar-fill");
     fill.innerHTML = '';
     for(let i=0;i<fundBlocks;i++){
@@ -248,9 +241,7 @@ function increaseFund() {
         fill.appendChild(span);
     }
 }
-
 function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
-
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
 document.getElementById("increaseRating").onclick = increaseRating;
