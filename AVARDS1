@@ -132,22 +132,18 @@
         gap: 20px;
     }
 
-    /* Прогресс-бар Призовой фонд - фиксированный сверху */
+    /* Прогресс-бар Призовой фонд */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
         height: 28px; 
+        margin: 10px auto 5px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
+        position: relative;
         border: 2px solid #00FF00; 
         display: flex;
-
-        position: fixed;
-        top: 5px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 999;
     }
     #prize-bar-fill {
         display: flex;
@@ -172,7 +168,7 @@
         pointer-events: none;
     }
 
-    /* Прогресс-бар Помощь приютам - фиксированный сверху */
+    /* Прогресс-бар Помощь приютам */
     #shelter-bar-container {
         width: 90%;
         max-width: 800px;
@@ -180,14 +176,10 @@
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
+        position: relative;
         border: 2px solid #FF1493; 
         display: flex;
-
-        position: fixed;
-        top: 40px; /* под первым баром */
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 999;
+        margin: 5px auto 20px auto;
     }
     #shelter-bar-fill {
         display: flex;
