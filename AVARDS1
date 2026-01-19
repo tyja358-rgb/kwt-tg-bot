@@ -1,4 +1,3 @@
-  GNU nano 6.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              /home/Moldova2026/webapp/index.html                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 <!DOCTYPE html>
 <html>
 <head>
@@ -137,21 +136,19 @@
         align-items: center;
         margin-top: 30px;
     }
-<!-- Призовой фонд -->
-<div id="prize-bar" style="
-    width: 90%;
-    max-width: 800px;
-    margin: 20px auto 10px auto;
-    padding: 10px 15px;
-    background-color: #FFD700; /* золотой фон */
-    color: #000;
-    font-weight: bold;
-    font-size: 18px;
-    border-radius: 10px;
-    text-align: center;
-">
-    Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей
-</div>
+    /* БАР ПРИЗОВОГО ФОНДА */
+    #prize-bar {
+        width: 90%;
+        max-width: 800px;
+        margin: 10px auto;
+        padding: 12px 15px;
+        background-color: #FFD700;
+        color: #000;
+        font-weight: bold;
+        font-size: 18px;
+        border-radius: 10px;
+        text-align: center;
+    }
 </style>
 </head>
 <body>
@@ -165,7 +162,13 @@
         <div id="sponsor2">Zoomagazin.md</div>
     </div>
 </div>
+
 <div id="main-content">
+    <!-- БАР ПРИЗОВОГО ФОНДА -->
+    <div id="prize-bar">
+        Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей
+    </div>
+
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
     <div class="paw-container">
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
@@ -181,15 +184,18 @@
         <div class="paw-label">Увеличь сумму призового фонда</div>
       </div>
     </div>
+
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
     </div>
+
     <div class="sponsors">
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
     </div>
 </div>
+
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
@@ -201,11 +207,19 @@ setTimeout(() => {
         document.getElementById("main-content").style.display = "block";
     }, 1000);
 }, 4000);
+
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
-function increaseFund() { tg.sendData(JSON.stringify({ action: "increase_fund" })); }
+function increaseFund() { 
+    tg.sendData(JSON.stringify({ action: "increase_fund" })); 
+    // Добавляем 5 бань к бару при нажатии
+    let prize = document.getElementById("prize-amount");
+    let current = parseInt(prize.textContent);
+    prize.textContent = current + 5;
+}
 function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
+
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
 document.getElementById("increaseRating").onclick = increaseRating;
