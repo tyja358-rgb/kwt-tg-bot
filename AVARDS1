@@ -130,6 +130,7 @@
         align-items: center;
         margin-top: 30px;
     }
+    /* Прогресс-бар */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
@@ -144,13 +145,12 @@
     #prize-bar-fill {
         display: flex;
         height: 100%;
-        width: 0%;
-        transition: width 0.3s;
+        width: 100%;
     }
     #prize-bar-fill span {
         flex: 1;
         border-right: 1px solid #ccc;
-        background-color: #FFD700;
+        background-color: #3B82F6; /* цвет как у кнопки синяя лапка */
         opacity: 0;
         transition: opacity 0.3s;
     }
@@ -212,6 +212,7 @@
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
+
 setTimeout(() => {
     const splash = document.getElementById("splash");
     splash.style.animation = "fadeOut 1s forwards";
@@ -243,7 +244,7 @@ function increaseFund() {
     for(let i=0;i<fundBlocks;i++){
         const span = document.createElement('span');
         if(i < fundProgress){
-            setTimeout(()=>{span.style.opacity = '1';}, i*50); // анимация подсветки
+            setTimeout(()=>{span.style.opacity = '1';}, i*50);
         }
         fill.appendChild(span);
     }
