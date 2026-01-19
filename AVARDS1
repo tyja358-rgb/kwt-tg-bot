@@ -131,38 +131,28 @@
         margin-top: 30px;
     }
 
-    /* Прогресс-бар с зелёной рамкой и 20 зелёных блоков */
+    /* Прогресс-бар */
     #prize-bar-container {
-        width: 90%;
-        max-width: 800px;
+        display: inline-block;
         height: 30px;
         margin: 10px auto 20px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
         position: relative;
-        display: flex;
-        border: 3px solid #22C55E; /* зелёная рамка */
+        border: 2px solid #00FF00; /* зелёная рамка */
     }
     #prize-bar-fill {
         display: flex;
         height: 100%;
         width: 100%;
-        justify-content: space-between;
     }
     #prize-bar-fill span {
         flex: 1;
-        margin-right: 2px;
-        background-color: #22C55E; /* зелёные блоки */
-        opacity: 0.4;
+        border-right: 1px solid #ccc;
+        background-color: #7CFC00; /* кислотный светло-зеленый */
+        opacity: 0;
         transition: opacity 0.3s;
-        border-radius: 3px;
-    }
-    #prize-bar-fill span.active {
-        opacity: 1; /* подсветка блока */
-    }
-    #prize-bar-fill span:last-child {
-        margin-right: 0;
     }
     #prize-bar-text {
         position: absolute;
@@ -190,7 +180,7 @@
 
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
-    <div id="prize-bar-text"><span id="prize-amount">20000</span> лей</div>
+    <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
 </div>
 
 <div id="main-content">
@@ -242,9 +232,8 @@ const fundBlocks = 20;
 function increaseFund() {
     tg.sendData(JSON.stringify({ action: "increase_fund" }));
 
-    if(fundProgress < fundBlocks){
-        fundProgress++;
-    } else {
+    fundProgress++;
+    if(fundProgress > fundBlocks){
         fundProgress = 0;
         let prize = document.getElementById("prize-amount");
         prize.textContent = parseInt(prize.textContent) + 1;
@@ -255,7 +244,7 @@ function increaseFund() {
     for(let i=0;i<fundBlocks;i++){
         const span = document.createElement('span');
         if(i < fundProgress){
-            span.classList.add('active'); // подсветка блока
+            setTimeout(()=>{span.style.opacity = '1';}, i*50);
         }
         fill.appendChild(span);
     }
