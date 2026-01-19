@@ -83,7 +83,7 @@
         display: block;
         width: 90%;
         max-width: 800px;
-        margin: 120px auto 20px auto; /* сдвинули ниже, чтобы не перекрывали бары */
+        margin: 60px auto 20px auto;
     }
     .paw-container {
         display: flex;
@@ -108,15 +108,6 @@
         box-shadow: 0 10px 15px rgba(0,0,0,0.3);
         transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
         position: relative;
-    }
-    .paw-btn:hover {
-        filter: brightness(1.2);
-        transform: translateY(-5px);
-        box-shadow: 0 15px 20px rgba(0,0,0,0.35);
-    }
-    .paw-btn:active {
-        transform: translateY(3px) scale(0.95);
-        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
     }
     .paw-label {
         margin-top: 10px;
@@ -209,29 +200,35 @@
         pointer-events: none;
     }
 
-    /* Свайп-лента */
-    .vote-container {
-        margin-top: 20px;
-        position: relative;
-    }
-    #vote-photo {
+    /* ======= НОВОЕ: ЛЕНТА ФОТО ======= */
+    #vote-feed {
         width: 90%;
         max-width: 800px;
-        height: 70vh;
-        object-fit: cover;
-        margin: 0 auto;
-        border-radius: 10px;
+        margin: 20px auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
     }
-    #vote-label {
-        text-align: center;
-        font-weight: bold;
-        margin-top: 10px;
-        font-size: 18px;
-        color: #000;
+    .vote-photo {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    }
+
+    /* скрытый input для выбора фото */
+    #photoInput {
+        display: none;
     }
 </style>
 </head>
 <body>
+
+<!-- скрытое поле выбора фото -->
+<input type="file" id="photoInput" accept="image/*">
+
 <div id="splash">
     <div class="splash-bg">
         <img src="Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
@@ -255,13 +252,6 @@
 
 <div id="main-content">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
-
-    <!-- Лента фото для голосования -->
-    <div class="vote-container">
-        <img id="vote-photo" src="" ontouchstart="touchStart(event)" ontouchmove="touchMove(event)" ontouchend="touchEnd(event)">
-        <div id="vote-label">Голосуй свайпом вверх/вниз</div>
-    </div>
-
     <div class="paw-container">
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
         <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
@@ -270,14 +260,24 @@
         <div class="paw-label">Подними свой рейтинг</div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <div class="paw-label">Голосовать</div>
         <button class="paw-btn" id="increaseFund" style="background-image: url('Синяя лапка.jpeg');"></button>
         <div class="paw-label">Увеличь сумму призового фонда</div>
       </div>
     </div>
 
+    <!-- Лента фото -->
+    <div id="vote-feed"></div>
+
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
+    </div>
+
+    <div class="sponsors">
+        <div>Ambros SRL</div>
+        <div>Zoomagazin.md</div>
     </div>
 </div>
 
@@ -294,45 +294,75 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
-function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
+/* ======= ФУНКЦИИ ======= */
+function addPhoto() {
+    document.getElementById("photoInput").click();
+}
+function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
-function increaseFund() { 
-    tg.sendData(JSON.stringify({ action: "increase_fund" })); 
-    fundProgress++; 
-    if(fundProgress > fundBlocks){ fundProgress = 0; document.getElementById("prize-amount").textContent = parseInt(document.getElementById("prize-amount").textContent)+1; }
-    const fill = document.getElementById("prize-bar-fill"); fill.innerHTML=''; 
-    for(let i=0;i<fundBlocks;i++){ const span = document.createElement('span'); if(i<fundProgress){ setTimeout(()=>{span.style.opacity='1';},i*50);} fill.appendChild(span);}
-}
-function helpShelters() { 
-    tg.sendData(JSON.stringify({ action: "help_shelters" })); 
-    shelterProgress++; 
-    if(shelterProgress>shelterBlocks){ shelterProgress=0; document.getElementById("shelter-amount").textContent=parseInt(document.getElementById("shelter-amount").textContent)+1;}
-    const fill=document.getElementById("shelter-bar-fill"); fill.innerHTML=''; 
-    for(let i=0;i<shelterBlocks;i++){ const span=document.createElement('span'); if(i<shelterProgress){ setTimeout(()=>{span.style.opacity='1';},i*50);} fill.appendChild(span);}
+
+let fundProgress = 0;
+const fundBlocks = 20;
+function increaseFund() {
+    tg.sendData(JSON.stringify({ action: "increase_fund" }));
+    fundProgress++;
+    if(fundProgress > fundBlocks){
+        fundProgress = 0;
+        let prize = document.getElementById("prize-amount");
+        prize.textContent = parseInt(prize.textContent) + 1;
+    }
+    const fill = document.getElementById("prize-bar-fill");
+    fill.innerHTML = '';
+    for(let i=0;i<fundBlocks;i++){
+        const span = document.createElement('span');
+        if(i < fundProgress){
+            setTimeout(()=>{span.style.opacity = '1';}, i*50);
+        }
+        fill.appendChild(span);
+    }
 }
 
-// ====== Лента фото для голосования ======
-let photos = ['photo1.jpg','photo2.jpg','photo3.jpg','photo4.jpg','photo5.jpg']; 
-let currentPhotoIndex = 0;
-function showPhoto(){ document.getElementById("vote-photo").src = photos[currentPhotoIndex]; }
-showPhoto();
-
-let touchStartY = 0;
-let touchEndY = 0;
-function touchStart(event){ touchStartY = event.touches[0].clientY; }
-function touchMove(event){ touchEndY = event.touches[0].clientY; }
-function touchEnd(event){ 
-    let diff = touchStartY - touchEndY; 
-    if(diff>50) nextPhoto();
-    if(diff<-50) prevPhoto();
+let shelterProgress = 0;
+const shelterBlocks = 20;
+function helpShelters() {
+    tg.sendData(JSON.stringify({ action: "help_shelters" }));
+    shelterProgress++;
+    if(shelterProgress > shelterBlocks){
+        shelterProgress = 0;
+        let shelter = document.getElementById("shelter-amount");
+        shelter.textContent = parseInt(shelter.textContent) + 1;
+    }
+    const fill = document.getElementById("shelter-bar-fill");
+    fill.innerHTML = '';
+    for(let i=0;i<shelterBlocks;i++){
+        const span = document.createElement('span');
+        if(i < shelterProgress){
+            setTimeout(()=>{span.style.opacity = '1';}, i*50);
+        }
+        fill.appendChild(span);
+    }
 }
-function nextPhoto(){ currentPhotoIndex++; if(currentPhotoIndex>=photos.length) currentPhotoIndex=0; showPhoto(); }
-function prevPhoto(){ currentPhotoIndex--; if(currentPhotoIndex<0) currentPhotoIndex=photos.length-1; showPhoto(); }
 
-document.getElementById("addPhoto").onclick=addPhoto;
-document.getElementById("increaseRating").onclick=increaseRating;
-document.getElementById("increaseFund").onclick=increaseFund;
-document.getElementById("helpShelters").onclick=helpShelters;
+/* ======= ОБРАБОТЧИК ВЫБОРА ФОТО ======= */
+document.getElementById("photoInput").addEventListener("change", function(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        img.className = "vote-photo";
+        document.getElementById("vote-feed").appendChild(img);
+    };
+    reader.readAsDataURL(file);
+});
+
+/* ======= ПРИВЯЗКА КНОПОК ======= */
+document.getElementById("addPhoto").onclick = addPhoto;
+document.getElementById("vote").onclick = vote;
+document.getElementById("increaseRating").onclick = increaseRating;
+document.getElementById("increaseFund").onclick = increaseFund;
+document.getElementById("helpShelters").onclick = helpShelters;
 </script>
 </body>
 </html>
