@@ -136,18 +136,31 @@
         align-items: center;
         margin-top: 30px;
     }
-    /* БАР ПРИЗОВОГО ФОНДА */
-    #prize-bar {
+    /* ПРОГРЕСС-БАР ПРИЗОВОГО ФОНДА */
+    #prize-bar-container {
         width: 90%;
         max-width: 800px;
+        height: 30px;
         margin: 10px auto;
-        padding: 12px 15px;
+        background-color: #ccc;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+    }
+    #prize-bar-fill {
+        height: 100%;
+        width: 50%; /* начальный прогресс */
         background-color: #FFD700;
-        color: #000;
-        font-weight: bold;
-        font-size: 18px;
-        border-radius: 10px;
+        transition: width 0.3s;
+    }
+    #prize-bar-text {
+        position: absolute;
+        width: 100%;
         text-align: center;
+        top: 0;
+        line-height: 30px;
+        font-weight: bold;
+        color: #000;
     }
 </style>
 </head>
@@ -163,12 +176,13 @@
     </div>
 </div>
 
-<div id="main-content">
-    <!-- БАР ПРИЗОВОГО ФОНДА -->
-    <div id="prize-bar">
-        Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей
-    </div>
+<!-- ПРОГРЕСС-БАР СУПЕР ВЫШЕ -->
+<div id="prize-bar-container">
+    <div id="prize-bar-fill"></div>
+    <div id="prize-bar-text">Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей</div>
+</div>
 
+<div id="main-content">
     <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
     <div class="paw-container">
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
@@ -184,12 +198,10 @@
         <div class="paw-label">Увеличь сумму призового фонда</div>
       </div>
     </div>
-
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
     </div>
-
     <div class="sponsors">
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
@@ -211,13 +223,22 @@ setTimeout(() => {
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
+
+// ФУНКЦИЯ ДЛЯ ПРОГРЕСС-БАРА
 function increaseFund() { 
     tg.sendData(JSON.stringify({ action: "increase_fund" })); 
-    // Добавляем 5 бань к бару при нажатии
     let prize = document.getElementById("prize-amount");
     let current = parseInt(prize.textContent);
-    prize.textContent = current + 5;
+    current += 5; // добавляем 5 лей
+    prize.textContent = current;
+
+    // обновляем прогресс шкалы
+    let maxPrize = 40000; // максимальная сумма для 100%
+    let fill = document.getElementById("prize-bar-fill");
+    let percent = Math.min((current / maxPrize) * 100, 100);
+    fill.style.width = percent + "%";
 }
+
 function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
 
 document.getElementById("addPhoto").onclick = addPhoto;
