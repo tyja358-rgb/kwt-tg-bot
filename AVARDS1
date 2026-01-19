@@ -130,7 +130,8 @@
         align-items: center;
         margin-top: 30px;
     }
-    /* Прогресс-бар */
+
+    /* Прогресс-бар с зелёной рамкой и 20 зелёных блоков */
     #prize-bar-container {
         width: 90%;
         max-width: 800px;
@@ -141,18 +142,27 @@
         overflow: hidden;
         position: relative;
         display: flex;
+        border: 3px solid #22C55E; /* зелёная рамка */
     }
     #prize-bar-fill {
         display: flex;
         height: 100%;
         width: 100%;
+        justify-content: space-between;
     }
     #prize-bar-fill span {
         flex: 1;
-        border-right: 1px solid #ccc;
-        background-color: #3B82F6; /* цвет как у кнопки синяя лапка */
-        opacity: 0;
+        margin-right: 2px;
+        background-color: #22C55E; /* зелёные блоки */
+        opacity: 0.4;
         transition: opacity 0.3s;
+        border-radius: 3px;
+    }
+    #prize-bar-fill span.active {
+        opacity: 1; /* подсветка блока */
+    }
+    #prize-bar-fill span:last-child {
+        margin-right: 0;
     }
     #prize-bar-text {
         position: absolute;
@@ -232,8 +242,9 @@ const fundBlocks = 20;
 function increaseFund() {
     tg.sendData(JSON.stringify({ action: "increase_fund" }));
 
-    fundProgress++;
-    if(fundProgress > fundBlocks){
+    if(fundProgress < fundBlocks){
+        fundProgress++;
+    } else {
         fundProgress = 0;
         let prize = document.getElementById("prize-amount");
         prize.textContent = parseInt(prize.textContent) + 1;
@@ -244,7 +255,7 @@ function increaseFund() {
     for(let i=0;i<fundBlocks;i++){
         const span = document.createElement('span');
         if(i < fundProgress){
-            setTimeout(()=>{span.style.opacity = '1';}, i*50);
+            span.classList.add('active'); // подсветка блока
         }
         fill.appendChild(span);
     }
