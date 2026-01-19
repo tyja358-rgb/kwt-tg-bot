@@ -133,14 +133,16 @@
 
     /* Прогресс-бар */
     #prize-bar-container {
-        display: inline-block;
-        height: 30px;
+        width: 90%;
+        max-width: 800px;
+        height: 40px; /* увеличена высота на ~10% от текста */
         margin: 10px auto 20px auto;
         background-color: #ccc;
         border-radius: 15px;
         overflow: hidden;
         position: relative;
         border: 2px solid #00FF00; /* зелёная рамка */
+        display: flex;
     }
     #prize-bar-fill {
         display: flex;
@@ -159,7 +161,7 @@
         width: 100%;
         text-align: center;
         top: 0;
-        line-height: 30px;
+        line-height: 40px; /* совпадает с высотой бара */
         font-weight: bold;
         color: #000;
         pointer-events: none;
