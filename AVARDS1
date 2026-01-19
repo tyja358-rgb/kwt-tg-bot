@@ -1,3 +1,4 @@
+  GNU nano 6.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              /home/Moldova2026/webapp/index.html                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,7 +11,7 @@
         text-align: center;
         margin: 0;
         padding: 0;
-        background-color: #f5f5f5; /* фон вебаппа */
+        background-color: #E9E8E6; /* фон вебаппа */
     }
     /* ЗАСТАВКА НА ВЕСЬ ЭКРАН */
     #splash {
@@ -127,7 +128,7 @@
         margin-top: 10px;
         font-size: 18px;
         font-weight: bold;
-        color: #FFD700; /* золото */
+        color: #000000; /* золото */
     }
     /* НОВЫЙ БЛОК ДЛЯ ЦЕНТРАЛЬНОЙ КНОПКИ СНИЗУ */
     .center-extra {
@@ -136,6 +137,21 @@
         align-items: center;
         margin-top: 30px;
     }
+<!-- Призовой фонд -->
+<div id="prize-bar" style="
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto 10px auto;
+    padding: 10px 15px;
+    background-color: #FFD700; /* золотой фон */
+    color: #000;
+    font-weight: bold;
+    font-size: 18px;
+    border-radius: 10px;
+    text-align: center;
+">
+    Animal Fest Moldova 2026 — Призовой фонд: <span id="prize-amount">20000</span> лей
+</div>
 </style>
 </head>
 <body>
@@ -185,13 +201,11 @@ setTimeout(() => {
         document.getElementById("main-content").style.display = "block";
     }, 1000);
 }, 4000);
-
 function addPhoto() { tg.sendData(JSON.stringify({ action: "add_photo" })); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
 function increaseFund() { tg.sendData(JSON.stringify({ action: "increase_fund" })); }
 function helpShelters() { tg.sendData(JSON.stringify({ action: "help_shelters" })); }
-
 document.getElementById("addPhoto").onclick = addPhoto;
 document.getElementById("vote").onclick = vote;
 document.getElementById("increaseRating").onclick = increaseRating;
