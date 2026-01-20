@@ -334,31 +334,33 @@ document.getElementById("increaseFund").onclick = increaseFund;
 document.getElementById("helpShelters").onclick = helpShelters;
 document.getElementById("increaseRating").onclick = ()=>tg.sendData(JSON.stringify({action:"increase_rating"}));
 
-// ЛЕНТА
+// ======= ЛЕНТА ФОТО (ГОЛОСОВАНИЕ) =======
 const voteFeed = document.getElementById("vote-feed");
+
 function openVoteFeed(){
-    voteFeed.innerHTML='<div id="vote-close">&times;</div>'; // добавляем крестик
+    voteFeed.innerHTML='<div id="vote-close">&times;</div>'; // крестик
     fetch("/photos")
     .then(res=>res.json())
     .then(photos=>{
         photos.reverse().forEach(p=>{
-            const img=document.createElement("img");
-            img.src=p.replace("uploads/","uploads/");
-            img.className="vote-photo";
+            const img = document.createElement("img");
+            img.src = p; // путь к фото с сервера
+            img.className = "vote-photo";
             voteFeed.appendChild(img);
         });
-        voteFeed.style.display="flex";
-        document.getElementById("main-content").style.display="none";
+        voteFeed.style.display = "flex";
+        document.getElementById("main-content").style.display = "none";
 
-        document.getElementById("vote-close").onclick=closeVoteFeed;
+        document.getElementById("vote-close").onclick = closeVoteFeed;
     });
 }
+
 function closeVoteFeed(){
-    voteFeed.style.display="none";
-    document.getElementById("main-content").style.display="block";
+    voteFeed.style.display = "none";
+    document.getElementById("main-content").style.display = "block";
 }
 
-document.getElementById("vote").onclick=openVoteFeed;
+document.getElementById("vote").onclick = openVoteFeed;
 </script>
 </body>
 </html>
