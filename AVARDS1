@@ -1,58 +1,11 @@
-from flask import Flask, request, jsonify, send_from_directory
-from telegram.ext import Updater, CommandHandler
-import os
-from threading import Thread
-
-# ======== Настройки ========
-TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-app = Flask(__name__)
-
-# ======== Telegram Bot ========
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
-
-# Команда /start
-def start(update, context):
-    update.message.reply_text("Бот запущен! Отправьте фото или используйте миниапку.")
-
-dispatcher.add_handler(CommandHandler("start", start))
-
-# ======== Flask маршруты ========
-# Загрузка фото
-@app.route("/upload", methods=["POST"])
-def upload():
-    if "photo" not in request.files:
-        return jsonify({"error": "Файл не найден"}), 400
-    file = request.files["photo"]
-    filename = file.filename
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-    return jsonify({"success": True, "filename": filename})
-
-# Получить список всех фото (только эта часть изменена)
-@app.route("/photos", methods=["GET"])
-def photos():
-    files = os.listdir(UPLOAD_FOLDER)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)), reverse=True)
-    # Возвращаем полный URL для браузера/WebApp
-    urls = [f"http://{request.host}/uploads/{f}" for f in files]
-    return jsonify(urls)
-
-# Раздача загруженных фото
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
 # ======== Запуск ========
 if __name__ == "__main__":
     # Flask в отдельном потоке
     def run_flask():
-        app.run(host="0.0.0.0", port=5000)
+        app.run(host="0.0.0.0", port=5000, debug=False)  # use_reloader не включаем
+
     Thread(target=run_flask).start()
-    
+
     print("Бот запущен...")
     updater.start_polling()
     updater.idle()
