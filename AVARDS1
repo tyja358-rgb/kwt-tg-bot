@@ -32,12 +32,12 @@ def upload():
     file.save(filepath)
     return jsonify({"success": True, "filename": filename})
 
-# Получить список всех фото
+# Получить список всех фото (только эта часть изменена)
 @app.route("/photos", methods=["GET"])
 def photos():
     files = os.listdir(UPLOAD_FOLDER)
     files.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)), reverse=True)
-    # Возвращаем полный URL для WebApp
+    # Возвращаем полный URL для браузера/WebApp
     urls = [f"http://{request.host}/uploads/{f}" for f in files]
     return jsonify(urls)
 
@@ -50,9 +50,9 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     # Flask в отдельном потоке
     def run_flask():
-        app.run(host="0.0.0.0", port=5000, debug=False)  # debug=False, чтобы не было проблемы с virtualenv
+        app.run(host="0.0.0.0", port=5000)
     Thread(target=run_flask).start()
-
+    
     print("Бот запущен...")
     updater.start_polling()
     updater.idle()
