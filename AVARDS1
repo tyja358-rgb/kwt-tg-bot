@@ -125,6 +125,29 @@ body {
 
 #main-content { display: none; padding-top: 10px; }
 
+.paw-btn {
+    width: 40vw;
+    max-width: 250px;
+    aspect-ratio: 1/1;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: transparent;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    position: relative;
+
+    /* ======= ВАЖНО: ЭТО Я ДОБАВИЛ ======= */
+    appearance: none;
+    -webkit-appearance: none;
+    background-repeat: no-repeat;
+    color: transparent;   /* убирает надписи поверх картинки */
+    padding: 0;
+}
+
 /* ======= ЛЕНТА ФОТО (ТИКТОК) ======= */
 #vote-feed {
     display: none;
@@ -233,73 +256,11 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
-// ======= Бары =======
-let fundProgress = 0, fundBlocks = 20;
-function increaseFund(){
-    fundProgress++;
-    if(fundProgress > fundBlocks){
-        fundProgress = 0;
-        document.getElementById("prize-amount").textContent =
-            parseInt(document.getElementById("prize-amount").textContent) + 1;
-    }
-    const fill = document.getElementById("prize-bar-fill"); 
-    fill.innerHTML='';
-    for(let i=0;i<fundBlocks;i++){
-        let span = document.createElement('span');
-        if(i<fundProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50);}
-        fill.appendChild(span);
-    }
-}
-
-let shelterProgress = 0, shelterBlocks = 20;
-function helpShelters(){
-    shelterProgress++;
-    if(shelterProgress > shelterBlocks){
-        shelterProgress = 0;
-        document.getElementById("shelter-amount").textContent =
-            parseInt(document.getElementById("shelter-amount").textContent) + 1;
-    }
-    const fill = document.getElementById("shelter-bar-fill");
-    fill.innerHTML='';
-    for(let i=0;i<shelterBlocks;i++){
-        let span = document.createElement('span');
-        if(i<shelterProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50);}
-        fill.appendChild(span);
-    }
-}
-
-// ======= Фото =======
-let tempPhoto = null;
-document.getElementById("photoInput").addEventListener("change", function(event){
-    const file = event.target.files[0];
-    if(!file) return;
-    tempPhoto = file;
-
-    const formData = new FormData();
-    formData.append("photo", tempPhoto);
-    fetch("/upload", { method:"POST", body: formData })
-    .then(res => res.json())
-    .then(data => {
-        tempPhoto = null;
-        document.getElementById("photoInput").value = "";
-        console.log("Фото загружено!");
-        alert("Фото загружено на сервер!");
-    })
-    .catch(err => console.error(err));
-});
-
-// ======= Кнопки =======
-document.getElementById("addPhoto").onclick = ()=>document.getElementById("photoInput").click();
-document.getElementById("increaseFund").onclick = increaseFund;
-document.getElementById("helpShelters").onclick = helpShelters;
-document.getElementById("increaseRating").onclick = ()=>tg.sendData(JSON.stringify({action:"increase_rating"}));
-
 // ======= Лента фото (голосование) =======
 const voteFeed = document.getElementById("vote-feed");
 const voteClose = document.getElementById("vote-close");
 
 function openVoteFeed(){
-    // Удаляем только старые фото, крестик НЕ трогаем
     voteFeed.querySelectorAll(".vote-photo, .empty-msg").forEach(el => el.remove());
 
     fetch("/photos")
