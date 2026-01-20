@@ -1,68 +1,97 @@
-from flask import Flask, request, jsonify, send_from_directory
-from telegram.ext import Updater, CommandHandler
-import os
-from threading import Thread
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Animal Fest Moldova 2026</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* ======= CSS оставляем как было ======= */
+body { font-family: Arial; text-align:center; margin:0; padding:0; background-color:#E9E8E6; }
+.paw-btn { width:80px; height:80px; border:none; background-size: cover; border-radius:12px; cursor:pointer; }
+.paw-label { font-size:14px; margin-top:5px; }
+#vote-feed { display:none; position:fixed; top:0; left:0; width:100%; height:100vh; background-color: rgba(233,232,230,0.95); flex-direction:column; align-items:center; overflow-y:scroll; padding-top:50px; z-index:10000; }
+.vote-photo { width:90%; max-width:500px; margin:10px 0; border-radius:12px; object-fit:cover; box-shadow:0 5px 15px rgba(0,0,0,0.3);}
+#vote-close { position:fixed; top:10px; right:10px; font-size:30px; cursor:pointer; z-index:10001; font-weight:bold; color:#000;}
+</style>
+</head>
+<body>
 
-# ======== НАСТРОЙКИ ========
-TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
+<input type="file" id="photoInput" accept="image/*" style="display:none">
 
-# Файлы будут в одной директории с bot.py
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # папка создаётся сама
+<!-- Основной контент -->
+<div id="main-content">
+    <img src="img/20260117_213955.jpg" alt="Animal Fest" class="festival-title">
+    <div class="paw-container">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <button class="paw-btn" id="addPhoto" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
+            <div class="paw-label">Добавить фото</div>
+            <button class="paw-btn" id="increaseRating" style="background-image: url('img/Синяя лапка.jpeg');"></button>
+            <div class="paw-label">Подними свой рейтинг</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <button class="paw-btn" id="vote" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
+            <div class="paw-label">Голосовать</div>
+            <button class="paw-btn" id="increaseFund" style="background-image: url('img/Синяя лапка.jpeg');"></button>
+            <div class="paw-label">Увеличь сумму призового фонда</div>
+        </div>
+    </div>
+    <div id="vote-feed">
+        <div id="vote-close">&times;</div>
+    </div>
+    <div class="center-extra">
+        <button class="paw-btn" id="helpShelters" style="background-image: url('img/Разноцветное сердечко.jpeg');"></button>
+        <div class="paw-label">Смотри и помогай приютам</div>
+    </div>
+    <div class="sponsors">
+        <div>Ambros SRL</div>
+        <div>Zoomagazin.md</div>
+    </div>
+</div>
 
-app = Flask(__name__)
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-# ======== TELEGRAM БОТ ========
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+// ======= Лента фото (голосование) =======
+const voteFeed = document.getElementById("vote-feed");
 
-def start(update, context):
-    update.message.reply_text(
-        "Бот запущен! Отправьте фото или откройте мини-приложение."
-    )
+function openVoteFeed() {
+    voteFeed.innerHTML = '<div id="vote-close">&times;</div>';
 
-dispatcher.add_handler(CommandHandler("start", start))
+    fetch("/photos")
+        .then(res => res.json())
+        .then(photos => {
+            // Если нет фото, всё равно откроем пустую галерею
+            if (photos.length === 0) {
+                const emptyMsg = document.createElement("div");
+                emptyMsg.textContent = "Пока нет фото для голосования";
+                emptyMsg.style.marginTop = "50px";
+                emptyMsg.style.fontSize = "18px";
+                voteFeed.appendChild(emptyMsg);
+            } else {
+                photos.forEach(p => {
+                    const img = document.createElement("img");
+                    img.src = "/uploads/" + encodeURIComponent(p);
+                    img.className = "vote-photo";
+                    voteFeed.appendChild(img);
+                });
+            }
 
-# ======== FLASK МАРШРУТЫ ========
+            voteFeed.style.display = "flex";
+            document.getElementById("main-content").style.display = "none";
 
-# Главная страница
-@app.route("/")
-def index():
-    return send_from_directory(BASE_DIR, "index.html")
+            document.getElementById("vote-close").onclick = closeVoteFeed;
+        })
+        .catch(err => console.error(err));
+}
 
-# Раздача загруженных картинок
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+function closeVoteFeed() {
+    voteFeed.style.display = "none";
+    document.getElementById("main-content").style.display = "block";
+}
 
-# Приём фото
-@app.route("/upload", methods=["POST"])
-def upload():
-    if "photo" not in request.files:
-        return jsonify({"error": "Файл не найден"}), 400
-    file = request.files["photo"]
-    if file.filename == "":
-        return jsonify({"error": "Пустое имя файла"}), 400
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(filepath)
-    return jsonify({"success": True, "filename": file.filename})
+document.getElementById("vote").onclick = openVoteFeed;
+</script>
 
-# Список фото для голосования
-@app.route("/photos", methods=["GET"])
-def photos():
-    files = os.listdir(UPLOAD_FOLDER)
-    images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-    # возвращаем относительные пути, чтобы JS мог их подставить
-    return jsonify(images)
-
-# ======== ЗАПУСК ========
-if __name__ == "__main__":
-    def run_flask():
-        app.run(host="0.0.0.0", port=5000)
-
-    Thread(target=run_flask).start()
-
-    print("Telegram бот запущен...")
-    updater.start_polling()
-    updater.idle()
+</body>
+</html>
