@@ -1,57 +1,98 @@
-from flask import Flask, request, jsonify, send_from_directory
-from telegram.ext import Updater, CommandHandler
-import os
-from threading import Thread
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-# ======== Настройки ========
-TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+// Скрытый input для фото
+const photoInput = document.getElementById("photoInput");
+let tempPhoto = null;
 
-app = Flask(__name__)
+photoInput.addEventListener("change", function(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    tempPhoto = file;
 
-# ======== Telegram Bot ========
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+    // Автозагрузка на сервер
+    const formData = new FormData();
+    formData.append("photo", tempPhoto);
+    fetch("/upload", { method: "POST", body: formData })
+    .then(res => res.json())
+    .then(data => {
+        tempPhoto = null;
+        photoInput.value = "";
+        console.log("Фото загружено!");
+        alert("Фото загружено на сервер!");
+    })
+    .catch(err => console.error(err));
+});
 
-# Команда /start
-def start(update, context):
-    update.message.reply_text("Бот запущен! Отправьте фото или используйте миниапку.")
+// Кнопки
+document.getElementById("addPhoto").onclick = () => photoInput.click();
+document.getElementById("increaseFund").onclick = increaseFund;
+document.getElementById("helpShelters").onclick = helpShelters;
+document.getElementById("increaseRating").onclick = () => tg.sendData(JSON.stringify({action:"increase_rating"}));
 
-dispatcher.add_handler(CommandHandler("start", start))
+// ======= ЛЕНТА ФОТО (ГОЛОСОВАНИЕ) =======
+const voteFeed = document.getElementById("vote-feed");
 
-# ======== Flask маршруты ========
-# Загрузка фото
-@app.route("/upload", methods=["POST"])
-def upload():
-    if "photo" not in request.files:
-        return jsonify({"error": "Файл не найден"}), 400
-    file = request.files["photo"]
-    filename = file.filename
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-    return jsonify({"success": True, "filename": filename})
+function openVoteFeed(){
+    voteFeed.innerHTML = '<div id="vote-close">&times;</div>'; // крестик
+    fetch("/photos")
+    .then(res => res.json())
+    .then(photos => {
+        photos.reverse().forEach(p => {
+            const img = document.createElement("img");
+            img.src = p; // путь к фото
+            img.className = "vote-photo";
+            voteFeed.appendChild(img);
+        });
+        voteFeed.style.display = "flex";
+        document.getElementById("main-content").style.display = "none";
 
-# Получить список всех фото
-@app.route("/photos", methods=["GET"])
-def photos():
-    files = os.listdir(UPLOAD_FOLDER)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)), reverse=True)
-    urls = [f"/uploads/{f}" for f in files]
-    return jsonify(urls)
+        document.getElementById("vote-close").onclick = closeVoteFeed;
+    })
+    .catch(err => console.error(err));
+}
 
-# Раздача загруженных фото
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+function closeVoteFeed(){
+    voteFeed.style.display = "none";
+    document.getElementById("main-content").style.display = "block";
+}
 
-# ======== Запуск ========
-if __name__ == "__main__":
-    # Flask в отдельном потоке
-    def run_flask():
-        app.run(host="0.0.0.0", port=5000)
-    Thread(target=run_flask).start()
-    
-    print("Бот запущен...")
-    updater.start_polling()
-    updater.idle()
+// Привязка кнопки
+document.getElementById("vote").onclick = openVoteFeed;
+
+// ======= ФУНКЦИИ БАРОВ =======
+let fundProgress = 0, fundBlocks = 20;
+function increaseFund(){
+    fundProgress++;
+    if(fundProgress > fundBlocks){
+        fundProgress = 0;
+        document.getElementById("prize-amount").textContent =
+            parseInt(document.getElementById("prize-amount").textContent) + 1;
+    }
+    const fill = document.getElementById("prize-bar-fill"); 
+    fill.innerHTML = '';
+    for(let i=0;i<fundBlocks;i++){
+        let span = document.createElement('span');
+        if(i<fundProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50); }
+        fill.appendChild(span);
+    }
+}
+
+let shelterProgress = 0, shelterBlocks = 20;
+function helpShelters(){
+    shelterProgress++;
+    if(shelterProgress > shelterBlocks){
+        shelterProgress = 0;
+        document.getElementById("shelter-amount").textContent =
+            parseInt(document.getElementById("shelter-amount").textContent) + 1;
+    }
+    const fill = document.getElementById("shelter-bar-fill");
+    fill.innerHTML = '';
+    for(let i=0;i<shelterBlocks;i++){
+        let span = document.createElement('span');
+        if(i<shelterProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50); }
+        fill.appendChild(span);
+    }
+}
+</script>
