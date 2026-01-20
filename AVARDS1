@@ -92,12 +92,41 @@ body {
     border-radius: 50%;
     border: 5px solid #111;
 }
+#splash .partners-title {
+    margin-top: 10px;
+    font-size: 26px;
+    font-weight: bold;
+    color: #FFD700; 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+    background-color: rgba(0,0,0,0.2);
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+#splash .sponsors {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+#splash .sponsors div {
+    background-color: rgba(17,17,17,0.95);
+    color: #FFD700;
+    font-weight: bold;
+    font-size: 20px;
+    padding: 9px 19px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    cursor: default;
+    display: inline-block;
+    white-space: nowrap;
+    text-shadow: none;
+}
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 #main-content { display: none; padding-top: 10px; }
 
-/* ======= ЛЕНТА ФОТО (ГОЛОСОВАНИЕ) ======= */
+/* ======= ЛЕНТА ФОТО (ТИКТОК) ======= */
 #vote-feed {
     display: none;
     position: fixed;
@@ -112,8 +141,14 @@ body {
     padding-top: 50px;
     z-index: 10000;
 }
-
-/* КРЕСТИК — ТЕПЕРЬ ПОСТОЯННЫЙ */
+.vote-photo {
+    width: 90%;
+    max-width: 500px;
+    margin: 10px 0;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
 #vote-close {
     position: fixed;
     top: 10px;
@@ -124,15 +159,6 @@ body {
     font-weight: bold;
     color: #000;
 }
-
-.vote-photo {
-    width: 90%;
-    max-width: 500px;
-    margin: 10px 0;
-    border-radius: 12px;
-    object-fit: cover;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
 </style>
 </head>
 <body>
@@ -142,6 +168,11 @@ body {
 <div id="splash">
     <div class="splash-bg">
         <img src="img/Кошка с букетом.jpeg" alt="Animal Fest" class="splash-img">
+    </div>
+    <div class="partners-title">Спонсоры и партнёры</div>
+    <div class="sponsors">
+        <div id="sponsor1">AMBROS SRL</div>
+        <div id="sponsor2">Zoomagazin.md</div>
     </div>
 </div>
 
@@ -175,11 +206,6 @@ body {
       </div>
     </div>
 
-    <!-- ЛЕНТА ГОЛОСОВАНИЯ (крестик теперь всегда внутри) -->
-    <div id="vote-feed">
-        <div id="vote-close">&times;</div>
-    </div>
-
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('img/Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
@@ -189,6 +215,11 @@ body {
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
     </div>
+</div>
+
+<!-- ❗️ВАЖНО: Лента вынесена ЗА main-content (единственное изменение в разметке) -->
+<div id="vote-feed">
+    <div id="vote-close">&times;</div>
 </div>
 
 <script>
@@ -204,26 +235,85 @@ setTimeout(() => {
     }, 1000);
 }, 4000);
 
-// ======= ЛЕНТА ФОТО (ГОЛОСОВАНИЕ) =======
+// ======= Бары =======
+let fundProgress = 0, fundBlocks = 20;
+function increaseFund(){
+    fundProgress++;
+    if(fundProgress > fundBlocks){
+        fundProgress = 0;
+        document.getElementById("prize-amount").textContent =
+            parseInt(document.getElementById("prize-amount").textContent) + 1;
+    }
+    const fill = document.getElementById("prize-bar-fill"); 
+    fill.innerHTML='';
+    for(let i=0;i<fundBlocks;i++){
+        let span = document.createElement('span');
+        if(i<fundProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50);}
+        fill.appendChild(span);
+    }
+}
+
+let shelterProgress = 0, shelterBlocks = 20;
+function helpShelters(){
+    shelterProgress++;
+    if(shelterProgress > shelterBlocks){
+        shelterProgress = 0;
+        document.getElementById("shelter-amount").textContent =
+            parseInt(document.getElementById("shelter-amount").textContent) + 1;
+    }
+    const fill = document.getElementById("shelter-bar-fill");
+    fill.innerHTML='';
+    for(let i=0;i<shelterBlocks;i++){
+        let span = document.createElement('span');
+        if(i<shelterProgress){ setTimeout(()=>{span.style.opacity='1';}, i*50);}
+        fill.appendChild(span);
+    }
+}
+
+// ======= Фото =======
+let tempPhoto = null;
+document.getElementById("photoInput").addEventListener("change", function(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    tempPhoto = file;
+
+    const formData = new FormData();
+    formData.append("photo", tempPhoto);
+    fetch("/upload", { method:"POST", body: formData })
+    .then(res => res.json())
+    .then(data => {
+        tempPhoto = null;
+        document.getElementById("photoInput").value = "";
+        console.log("Фото загружено!");
+        alert("Фото загружено на сервер!");
+    })
+    .catch(err => console.error(err));
+});
+
+// ======= Кнопки =======
+document.getElementById("addPhoto").onclick = ()=>document.getElementById("photoInput").click();
+document.getElementById("increaseFund").onclick = increaseFund;
+document.getElementById("helpShelters").onclick = helpShelters;
+document.getElementById("increaseRating").onclick = ()=>tg.sendData(JSON.stringify({action:"increase_rating"}));
+
+// ======= Лента фото (голосование) =======
 const voteFeed = document.getElementById("vote-feed");
 
-// КРЕСТИК ПРИВЯЗЫВАЕМ ОДИН РАЗ
-document.getElementById("vote-close").onclick = closeVoteFeed;
-
 function openVoteFeed(){
-    // очищаем ТОЛЬКО фото, но НЕ удаляем крестик
-    const existingClose = document.getElementById("vote-close");
-    voteFeed.innerHTML = "";
-    voteFeed.appendChild(existingClose);
+    // очищаем старые фото, но НЕ трогаем крестик
+    while (voteFeed.children.length > 1) {
+        voteFeed.removeChild(voteFeed.lastChild);
+    }
 
     fetch("/photos")
     .then(res => res.json())
     .then(photos => {
+
         if (!photos || photos.length === 0) {
             const emptyMsg = document.createElement("div");
             emptyMsg.textContent = "Пока нет фото для голосования";
             emptyMsg.style.fontSize = "20px";
-            emptyMsg.style.marginTop = "50px";
+            emptyMsg.style.marginTop = "60px";
             voteFeed.appendChild(emptyMsg);
         } else {
             photos.reverse().forEach(p=>{
@@ -242,7 +332,7 @@ function openVoteFeed(){
         const emptyMsg = document.createElement("div");
         emptyMsg.textContent = "Не удалось загрузить фото";
         emptyMsg.style.fontSize = "20px";
-        emptyMsg.style.marginTop = "50px";
+        emptyMsg.style.marginTop = "60px";
         voteFeed.appendChild(emptyMsg);
 
         voteFeed.style.display="flex";
@@ -256,6 +346,7 @@ function closeVoteFeed(){
 }
 
 document.getElementById("vote").onclick = openVoteFeed;
+document.getElementById("vote-close").onclick = closeVoteFeed;
 </script>
 
 </body>
