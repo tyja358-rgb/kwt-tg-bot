@@ -1,61 +1,128 @@
-# bot.py
-from flask import Flask, request, jsonify, send_from_directory
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import os
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Animal Fest Moldova 2026</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* === Существующие стили оставлены без изменений === */
+body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; background-color: #E9E8E6; }
+/* ...все твои стили от index.html выше остаются... */
 
-# ======== Настройки ========
-TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+/* ======= ЛЕНТА ФОТО (ТИКТОК) ======= */
+#vote-feed {
+    display: none; /* изначально скрыта */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(233,232,230,0.95);
+    flex-direction: column;
+    align-items: center;
+    overflow-y: scroll;
+    padding-top: 50px;
+    z-index: 10000;
+}
+.vote-photo {
+    width: 90%;
+    max-width: 500px;
+    margin: 10px 0;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+#vote-close {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 10001;
+    font-weight: bold;
+    color: #000;
+}
+</style>
+</head>
+<body>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
 
-app = Flask(__name__)
+<!-- === Все существующие блоки splash, баров, main-content остаются === -->
+<div id="splash">
+    <!-- твой splash код -->
+</div>
+<div id="prize-bar-container"><div id="prize-bar-fill"></div><div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div></div>
+<div id="shelter-bar-container"><div id="shelter-bar-fill"></div><div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div></div>
 
-# ======== Telegram Bot ========
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+<div id="main-content">
+    <!-- твой основной контент, кнопки и изображения -->
+    <img src="img/20260117_213955.jpg" alt="Animal Fest" class="festival-title">
+    <div class="paw-container">
+      <!-- кнопки добавления фото, рейтинг, голосовать, фонд -->
+    </div>
 
-# Пример команды /start
-def start(update, context):
-    update.message.reply_text("Бот запущен! Отправьте фото или используйте миниапку.")
+    <!-- Лента для голосования -->
+    <div id="vote-feed">
+        <div id="vote-close">&times;</div>
+    </div>
 
-dispatcher.add_handler(CommandHandler("start", start))
+    <div class="center-extra">
+        <!-- кнопка помощь приютам -->
+    </div>
+</div>
 
-# ======== Flask маршруты ========
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-# Загрузка фото
-@app.route("/upload", methods=["POST"])
-def upload():
-    if "photo" not in request.files:
-        return jsonify({"error": "Файл не найден"}), 400
-    file = request.files["photo"]
-    filename = file.filename
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-    return jsonify({"success": True, "filename": filename})
+/* === Существующие функции splash, бары оставлены === */
 
-# Получить список всех фото
-@app.route("/photos", methods=["GET"])
-def photos():
-    files = os.listdir(UPLOAD_FOLDER)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)), reverse=True)
-    urls = [f"uploads/{f}" for f in files]
-    return jsonify(urls)
+/* ======= ФОТО ======= */
+document.getElementById("photoInput").addEventListener("change", function(event){
+    const file = event.target.files[0];
+    if(!file) return;
 
-# Раздача загруженных фото
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    // Автозагрузка на сервер
+    const formData = new FormData();
+    formData.append("photo", file);
+    fetch("/upload", { method: "POST", body: formData })
+    .then(res=>res.json())
+    .then(data=>{
+        document.getElementById("photoInput").value="";
+        alert("Фото загружено!"); // уведомление пользователю
+    });
+});
 
-# ======== Запуск ========
-if __name__ == "__main__":
-    from threading import Thread
+// Кнопки
+document.getElementById("addPhoto").onclick = ()=>document.getElementById("photoInput").click();
 
-    # Flask в отдельном потоке
-    def run_flask():
-        app.run(host="0.0.0.0", port=5000)
+/* ======= ЛЕНТА ГОЛОСОВАНИЯ ======= */
+const voteFeed = document.getElementById("vote-feed");
+function openVoteFeed(){
+    voteFeed.innerHTML='<div id="vote-close">&times;</div>'; // добавляем крестик
+    fetch("/photos") // получаем все фото всех пользователей
+    .then(res=>res.json())
+    .then(photos=>{
+        photos.reverse().forEach(p=>{
+            const img=document.createElement("img");
+            img.src=p; // путь к фото с сервера
+            img.className="vote-photo";
+            voteFeed.appendChild(img);
+        });
+        voteFeed.style.display="flex";
+        document.getElementById("main-content").style.display="none";
 
-    Thread(target=run_flask).start()
+        document.getElementById("vote-close").onclick=closeVoteFeed;
+    });
+}
 
-    print("Бот запущен...")
-    updater.start_polling()
-    updater.idle()
+function closeVoteFeed(){
+    voteFeed.style.display="none";
+    document.getElementById("main-content").style.display="block";
+}
+
+document.getElementById("vote").onclick=openVoteFeed;
+
+</script>
+</body>
+</html>
