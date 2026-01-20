@@ -1,11 +1,33 @@
-# ======== Запуск ========
-if __name__ == "__main__":
-    # Flask в отдельном потоке
-    def run_flask():
-        app.run(host="0.0.0.0", port=5000, debug=False)  # use_reloader не включаем
+<script>
+const voteFeed = document.getElementById("vote-feed");
 
-    Thread(target=run_flask).start()
+function openVoteFeed(){
+    voteFeed.innerHTML='<div id="vote-close">&times;</div>'; // крестик
+    fetch("/photos")
+    .then(res => res.json())
+    .then(photos => {
+        console.log("Photos received:", photos); // <- проверяем массив фото
+        if(photos.length === 0){
+            alert("Фотографии пока не загружены");
+        }
+        photos.reverse().forEach(p => {
+            const img = document.createElement("img");
+            img.src = p; // полный URL от Flask
+            img.className = "vote-photo";
+            voteFeed.appendChild(img);
+        });
+        voteFeed.style.display = "flex";
+        document.getElementById("main-content").style.display = "none";
+        document.getElementById("vote-close").onclick = closeVoteFeed;
+    })
+    .catch(err => console.error("Ошибка при получении фото:", err));
+}
 
-    print("Бот запущен...")
-    updater.start_polling()
-    updater.idle()
+function closeVoteFeed(){
+    voteFeed.style.display = "none";
+    document.getElementById("main-content").style.display = "block";
+}
+
+// Привязываем кнопку
+document.getElementById("vote").onclick = openVoteFeed;
+</script>
