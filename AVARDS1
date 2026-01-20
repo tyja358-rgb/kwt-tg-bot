@@ -1,269 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Animal Fest Moldova 2026</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #E9E8E6;
-        overflow-x: hidden;
-    }
-    #splash {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100vh;
-        background-color: #6A0DAD;
-        display: flex; flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        z-index: 9999;
-        opacity: 0;
-        animation: fadeIn 1s forwards;
-    }
-    .splash-bg {
-        position: relative;
-        width: 220px; height: 220px;
-        background-color: #FFF;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-image: url('img/cow_pattern.png');
-        background-size: cover;
-        margin-top: 20px;
-    }
-    .splash-img {
-        width: 200px; height: 200px;
-        object-fit: cover;
-        border-radius: 50%;
-        border: 5px solid #111;
-    }
-    #splash .partners-title {
-        margin-top: 10px;
-        font-size: 26px;
-        font-weight: bold;
-        color: #FFD700;
-        background-color: rgba(0,0,0,0.2);
-        padding: 6px 12px;
-        border-radius: 6px;
-    }
-    #splash .sponsors {
-        margin-top: 40px;
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-    }
-    #splash .sponsors div {
-        background-color: rgba(17,17,17,0.95);
-        color: #FFD700;
-        font-weight: bold;
-        font-size: 20px;
-        padding: 9px 19px;
-        border-radius: 10px;
-        cursor: default;
-        display: inline-block;
-    }
+import os
+from flask import Flask, request, jsonify, send_from_directory
+from telegram import Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import logging
 
-    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-    @keyframes fadeOut { from {opacity:1;} to {opacity:0;} }
+# ======= НАСТРОЙКИ =======
+TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"  # твой токен
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-    #main-content { display: none; padding-top: 10px; }
-    .festival-title {
-        display: block;
-        width: 90%; max-width: 800px;
-        margin: 120px auto 20px auto; /* не перекрывает бары */
-    }
-    .paw-container {
-        display: flex;
-        justify-content: space-around;
-        gap: 20px;
-        margin-top: 20px;
-    }
-    .paw-btn {
-        width: 40vw; max-width: 250px;
-        aspect-ratio: 1/1;
-        border-radius: 50%; border: none;
-        background-size: cover; background-position: center;
-        cursor: pointer; box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-        transition: 0.15s;
-    }
-    .paw-label {
-        margin-top: 10px;
-        font-size: 18px;
-        font-weight: bold;
-        color: #000;
-        text-align: center;
-    }
+# ======= ЛОГИ =======
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-    .center-extra { display:flex; flex-direction:column; align-items:center; gap:20px; margin-top:30px; }
+# ======= FLASK =======
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-    /* ======= БАРЫ ======= */
-    #prize-bar-container, #shelter-bar-container {
-        width: 90%; max-width:800px; height:28px;
-        border-radius:15px; overflow:hidden; display:flex;
-        position: fixed; left:50%; transform:translateX(-50%); z-index:999;
-        background-color: transparent;
-    }
-    #prize-bar-container { top:5px; border:2px solid #00FF00; }
-    #shelter-bar-container { top:40px; border:2px solid #FF1493; }
+# API для загрузки фото
+@app.route("/upload", methods=["POST"])
+def upload_photo():
+    if "photo" not in request.files:
+        return jsonify({"status": "error", "message": "No photo part"})
+    file = request.files["photo"]
+    if file.filename == "":
+        return jsonify({"status": "error", "message": "No selected file"})
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+    file.save(save_path)
+    return jsonify({"status": "ok", "filename": file.filename})
 
-    #prize-bar-fill, #shelter-bar-fill { display:flex; height:100%; width:100%; }
-    #prize-bar-fill span { flex:1; border-right:1px solid #ccc; background-color:#7CFC00; opacity:0; transition:opacity 0.3s; }
-    #shelter-bar-fill span { flex:1; border-right:1px solid #ccc; background-color:#FF69B4; opacity:0; transition:opacity 0.3s; }
+# API для получения всех фото
+@app.route("/photos", methods=["GET"])
+def get_photos():
+    files = sorted(os.listdir(app.config["UPLOAD_FOLDER"]), reverse=True)
+    return jsonify([f"uploads/{file}" for file in files])
 
-    #prize-bar-text, #shelter-bar-text {
-        position:absolute; width:100%; text-align:center; top:0; line-height:28px; font-weight:bold; color:#000; pointer-events:none;
-    }
+# Для теста сервера
+@app.route("/")
+def index():
+    return "Bot Flask server is running!"
 
-    /* ======= ЛЕНТА ФОТО ======= */
-    #vote-feed {
-        display:none;
-        position:fixed; top:0; left:0; width:100%; height:100vh;
-        background-color:#E9E8E6;
-        flex-direction:column;
-        overflow-y: scroll;
-        z-index: 1000;
-        padding-top: 50px;
-        align-items: center;
-    }
-    .vote-photo {
-        width:90%; max-width:500px; margin:10px auto; object-fit:cover; border-radius:12px; box-shadow:0 5px 10px rgba(0,0,0,0.2);
-    }
-    #closeFeed {
-        position:fixed; top:10px; right:10px; font-size:24px; background:#FF1493; color:white;
-        border:none; border-radius:50%; width:40px; height:40px; cursor:pointer; z-index:1001;
-    }
-</style>
-</head>
-<body>
-<input type="file" id="photoInput" accept="image/*">
+# ======= TELEGRAM BOT =======
+bot = Bot(token=TOKEN)
+updater = Updater(token=TOKEN, use_context=True)
+dispatcher = updater.dispatcher
 
-<div id="splash">
-    <div class="splash-bg">
-        <img src="img/Кошка с букетом.jpeg" class="splash-img">
-    </div>
-    <div class="partners-title">Спонсоры и партнёры</div>
-    <div class="sponsors">
-        <div id="sponsor1">AMBROS SRL</div>
-        <div id="sponsor2">Zoomagazin.md</div>
-    </div>
-</div>
+# Команда /start
+def start(update, context):
+    update.message.reply_text("Бот запущен! WebApp готов.")
 
-<div id="prize-bar-container">
-    <div id="prize-bar-fill"></div>
-    <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
-</div>
-<div id="shelter-bar-container">
-    <div id="shelter-bar-fill"></div>
-    <div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div>
-</div>
+dispatcher.add_handler(CommandHandler("start", start))
 
-<div id="main-content">
-    <img src="img/20260117_213955.jpg" class="festival-title">
-    <div class="paw-container">
-      <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="addPhoto" style="background-image:url('img/°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Добавить фото</div>
-        <button class="paw-btn" id="increaseRating" style="background-image:url('img/Синяя лапка.jpeg');"></button>
-        <div class="paw-label">Подними свой рейтинг</div>
-      </div>
-      <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="vote" style="background-image:url('img/°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Голосовать</div>
-        <button class="paw-btn" id="increaseFund" style="background-image:url('img/Синяя лапка.jpeg');"></button>
-        <div class="paw-label">Увеличь сумму призового фонда</div>
-      </div>
-    </div>
-    <div class="center-extra">
-        <button class="paw-btn" id="helpShelters" style="background-image:url('img/Разноцветное сердечко.jpeg');"></button>
-        <div class="paw-label">Смотри и помогай приютам</div>
-    </div>
-</div>
+# Обработка всех текстовых сообщений
+def echo(update, context):
+    update.message.reply_text("Я получаю сообщения, но WebApp работает через кнопки.")
 
-<!-- Лента -->
-<div id="vote-feed">
-    <button id="closeFeed">×</button>
-</div>
+dispatcher.add_handler(MessageHandler(Filters.text, echo))
 
-<script>
-const tg = window.Telegram.WebApp;
-tg.expand();
+# ======= ЗАПУСК БОТА И FLASK =======
+if __name__ == "__main__":
+    # Запускаем Flask в отдельном потоке
+    from threading import Thread
+    def run_flask():
+        app.run(host="0.0.0.0", port=5000)
+    Thread(target=run_flask).start()
 
-setTimeout(()=>{
-    const splash = document.getElementById("splash");
-    splash.style.animation="fadeOut 1s forwards";
-    setTimeout(()=>{ splash.style.display="none"; document.getElementById("main-content").style.display="block"; }, 1000);
-},4000);
-
-let photoArray = []; // массив всех фото
-let tempPhoto = null;
-
-// выбор фото
-document.getElementById("photoInput").addEventListener("change", function(e){
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev){
-        tempPhoto = ev.target.result;
-        photoArray.push(tempPhoto); // сохраняем в массив
-        tempPhoto = null;
-        document.getElementById("photoInput").value = "";
-        alert("Фото добавлено!");
-    };
-    reader.readAsDataURL(file);
-});
-
-// открыть ленту
-function openVoteFeed(){
-    const feed = document.getElementById("vote-feed");
-    feed.innerHTML='<button id="closeFeed">×</button>'; // крестик
-    for(let i=photoArray.length-1;i>=0;i--){ // последние фото сверху
-        const img = document.createElement("img");
-        img.src = photoArray[i];
-        img.className="vote-photo";
-        feed.appendChild(img);
-    }
-    feed.style.display="flex";
-    document.getElementById("main-content").style.display="none";
-
-    // закрытие ленты
-    document.getElementById("closeFeed").onclick=function(){
-        feed.style.display="none";
-        document.getElementById("main-content").style.display="block";
-    };
-}
-
-// кнопки
-document.getElementById("addPhoto").onclick = function(){ document.getElementById("photoInput").click(); };
-document.getElementById("vote").onclick = openVoteFeed;
-
-let fundProgress=0; const fundBlocks=20;
-function increaseFund(){
-    tg.sendData(JSON.stringify({action:"increase_fund"}));
-    fundProgress++;
-    if(fundProgress>fundBlocks){ fundProgress=0; let prize=document.getElementById("prize-amount"); prize.textContent=parseInt(prize.textContent)+1; }
-    const fill=document.getElementById("prize-bar-fill");
-    fill.innerHTML='';
-    for(let i=0;i<fundBlocks;i++){ const span=document.createElement('span'); if(i<fundProgress){ setTimeout(()=>{span.style.opacity='1';},i*50); } fill.appendChild(span);}
-}
-
-let shelterProgress=0; const shelterBlocks=20;
-function helpShelters(){
-    tg.sendData(JSON.stringify({action:"help_shelters"}));
-    shelterProgress++;
-    if(shelterProgress>shelterBlocks){ shelterProgress=0; let shelter=document.getElementById("shelter-amount"); shelter.textContent=parseInt(shelter.textContent)+1; }
-    const fill=document.getElementById("shelter-bar-fill");
-    fill.innerHTML='';
-    for(let i=0;i<shelterBlocks;i++){ const span=document.createElement('span'); if(i<shelterProgress){ setTimeout(()=>{span.style.opacity='1';},i*50); } fill.appendChild(span);}
-}
-
-document.getElementById("increaseRating").onclick = function(){ tg.sendData(JSON.stringify({action:"increase_rating"})); };
-document.getElementById("increaseFund").onclick = increaseFund;
-document.getElementById("helpShelters").onclick = helpShelters;
-</script>
-</body>
-</html>
+    # Запускаем Telegram polling
+    updater.start_polling()
+    print("Бот запущен...")
+    updater.idle()
