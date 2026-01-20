@@ -36,7 +36,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background-image: url('cow_pattern.png');
+        background-image: url('img/cow_pattern.png');
         background-size: cover;
         margin-top: 20px;
     }
@@ -83,7 +83,7 @@
         display: block;
         width: 90%;
         max-width: 800px;
-        margin: 60px auto 20px auto;
+        margin: 120px auto 20px auto;
     }
     .paw-container {
         display: flex;
@@ -123,21 +123,24 @@
         gap: 20px;
     }
 
-    /* Прозрачные бары сверху */
-    #prize-bar-container {
+    /* ======= БАРЫ СВЕРХУ ======= */
+    #prize-bar-container, #shelter-bar-container {
         width: 90%;
         max-width: 800px;
-        height: 28px; 
+        height: 28px;
         background-color: transparent;
         border-radius: 15px;
         overflow: hidden;
-        border: 2px solid #00FF00; 
         display: flex;
         position: fixed;
-        top: 5px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 999;
+    }
+
+    #prize-bar-container {
+        top: 5px;
+        border: 2px solid #00FF00;
     }
     #prize-bar-fill {
         display: flex;
@@ -147,7 +150,7 @@
     #prize-bar-fill span {
         flex: 1;
         border-right: 1px solid #ccc;
-        background-color: #7CFC00; 
+        background-color: #7CFC00;
         opacity: 0;
         transition: opacity 0.3s;
     }
@@ -156,26 +159,15 @@
         width: 100%;
         text-align: center;
         top: 0;
-        line-height: 28px; 
+        line-height: 28px;
         font-weight: bold;
         color: #000;
         pointer-events: none;
     }
 
     #shelter-bar-container {
-        width: 90%;
-        max-width: 800px;
-        height: 28px; 
-        background-color: transparent;
-        border-radius: 15px;
-        overflow: hidden;
-        border: 2px solid #FF1493; 
-        display: flex;
-        position: fixed;
         top: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 999;
+        border: 2px solid #FF1493;
     }
     #shelter-bar-fill {
         display: flex;
@@ -185,7 +177,7 @@
     #shelter-bar-fill span {
         flex: 1;
         border-right: 1px solid #ccc;
-        background-color: #FF69B4; 
+        background-color: #FF69B4;
         opacity: 0;
         transition: opacity 0.3s;
     }
@@ -194,13 +186,13 @@
         width: 100%;
         text-align: center;
         top: 0;
-        line-height: 28px; 
+        line-height: 28px;
         font-weight: bold;
         color: #000;
         pointer-events: none;
     }
 
-    /* ======= НОВОЕ: ЛЕНТА ФОТО ======= */
+    /* ======= ЛЕНТА ФОТО ======= */
     #vote-feed {
         width: 90%;
         max-width: 800px;
@@ -218,20 +210,16 @@
         box-shadow: 0 5px 10px rgba(0,0,0,0.2);
     }
 
-    /* скрытый input для выбора фото */
-    #photoInput {
-        display: none;
-    }
+    #photoInput { display: none; }
 </style>
 </head>
 <body>
 
-<!-- скрытое поле выбора фото -->
 <input type="file" id="photoInput" accept="image/*">
 
 <div id="splash">
     <div class="splash-bg">
-        <img src="Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
+        <img src="img/Кошка с букетом.jpeg" alt="Animal Fest Moldova 2026" class="splash-img">
     </div>
     <div class="partners-title">Спонсоры и партнёры</div>
     <div class="sponsors">
@@ -240,7 +228,6 @@
     </div>
 </div>
 
-<!-- Бары сверху -->
 <div id="prize-bar-container">
     <div id="prize-bar-fill"></div>
     <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
@@ -251,27 +238,26 @@
 </div>
 
 <div id="main-content">
-    <img src="20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
+    <img src="img/20260117_213955.jpg" alt="Animal Fest Moldova 2026" class="festival-title">
     <div class="paw-container">
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="addPhoto" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <button class="paw-btn" id="addPhoto" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
         <div class="paw-label">Добавить фото</div>
-        <button class="paw-btn" id="increaseRating" style="background-image: url('Синяя лапка.jpeg');"></button>
+        <button class="paw-btn" id="increaseRating" style="background-image: url('img/Синяя лапка.jpeg');"></button>
         <div class="paw-label">Подними свой рейтинг</div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="vote" style="background-image: url('°•♡Pata de gato♡•°.jpeg');"></button>
+        <button class="paw-btn" id="vote" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
         <div class="paw-label">Голосовать</div>
-        <button class="paw-btn" id="increaseFund" style="background-image: url('Синяя лапка.jpeg');"></button>
+        <button class="paw-btn" id="increaseFund" style="background-image: url('img/Синяя лапка.jpeg');"></button>
         <div class="paw-label">Увеличь сумму призового фонда</div>
       </div>
     </div>
 
-    <!-- Лента фото -->
     <div id="vote-feed"></div>
 
     <div class="center-extra">
-        <button class="paw-btn" id="helpShelters" style="background-image: url('Разноцветное сердечко.jpeg');"></button>
+        <button class="paw-btn" id="helpShelters" style="background-image: url('img/Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
     </div>
 
@@ -295,9 +281,7 @@ setTimeout(() => {
 }, 4000);
 
 /* ======= ФУНКЦИИ ======= */
-function addPhoto() {
-    document.getElementById("photoInput").click();
-}
+function addPhoto() { document.getElementById("photoInput").click(); }
 function vote() { tg.sendData(JSON.stringify({ action: "vote" })); }
 function increaseRating() { tg.sendData(JSON.stringify({ action: "increase_rating" })); }
 
@@ -315,9 +299,7 @@ function increaseFund() {
     fill.innerHTML = '';
     for(let i=0;i<fundBlocks;i++){
         const span = document.createElement('span');
-        if(i < fundProgress){
-            setTimeout(()=>{span.style.opacity = '1';}, i*50);
-        }
+        if(i < fundProgress){ setTimeout(()=>{span.style.opacity = '1';}, i*50); }
         fill.appendChild(span);
     }
 }
@@ -336,9 +318,7 @@ function helpShelters() {
     fill.innerHTML = '';
     for(let i=0;i<shelterBlocks;i++){
         const span = document.createElement('span');
-        if(i < shelterProgress){
-            setTimeout(()=>{span.style.opacity = '1';}, i*50);
-        }
+        if(i < shelterProgress){ setTimeout(()=>{span.style.opacity = '1';}, i*50); }
         fill.appendChild(span);
     }
 }
@@ -352,7 +332,10 @@ document.getElementById("photoInput").addEventListener("change", function(event)
         const img = document.createElement("img");
         img.src = e.target.result;
         img.className = "vote-photo";
+        // Фото сразу в ленту голосования
         document.getElementById("vote-feed").appendChild(img);
+        // Автоматически отправляем действие голосования для этого фото
+        tg.sendData(JSON.stringify({ action: "vote", photo: e.target.result }));
     };
     reader.readAsDataURL(file);
 });
