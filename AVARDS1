@@ -119,7 +119,6 @@ body {
     cursor: default;
     display: inline-block;
     white-space: nowrap;
-    text-shadow: none;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
@@ -206,6 +205,10 @@ body {
       </div>
     </div>
 
+    <div id="vote-feed">
+        <div id="vote-close">&times;</div>
+    </div>
+
     <div class="center-extra">
         <button class="paw-btn" id="helpShelters" style="background-image: url('img/Разноцветное сердечко.jpeg');"></button>
         <div class="paw-label">Смотри и помогай приютам</div>
@@ -215,11 +218,6 @@ body {
         <div>Ambros SRL</div>
         <div>Zoomagazin.md</div>
     </div>
-</div>
-
-<!-- ❗️ВАЖНО: Лента вынесена ЗА main-content (единственное изменение в разметке) -->
-<div id="vote-feed">
-    <div id="vote-close">&times;</div>
 </div>
 
 <script>
@@ -298,22 +296,21 @@ document.getElementById("increaseRating").onclick = ()=>tg.sendData(JSON.stringi
 
 // ======= Лента фото (голосование) =======
 const voteFeed = document.getElementById("vote-feed");
+const voteClose = document.getElementById("vote-close");
 
 function openVoteFeed(){
-    // очищаем старые фото, но НЕ трогаем крестик
-    while (voteFeed.children.length > 1) {
-        voteFeed.removeChild(voteFeed.lastChild);
-    }
+    // Удаляем только старые фото, крестик НЕ трогаем
+    voteFeed.querySelectorAll(".vote-photo, .empty-msg").forEach(el => el.remove());
 
     fetch("/photos")
     .then(res => res.json())
     .then(photos => {
-
         if (!photos || photos.length === 0) {
             const emptyMsg = document.createElement("div");
+            emptyMsg.className = "empty-msg";
             emptyMsg.textContent = "Пока нет фото для голосования";
             emptyMsg.style.fontSize = "20px";
-            emptyMsg.style.marginTop = "60px";
+            emptyMsg.style.marginTop = "50px";
             voteFeed.appendChild(emptyMsg);
         } else {
             photos.reverse().forEach(p=>{
@@ -329,10 +326,12 @@ function openVoteFeed(){
     })
     .catch(err => {
         console.error(err);
+
         const emptyMsg = document.createElement("div");
+        emptyMsg.className = "empty-msg";
         emptyMsg.textContent = "Не удалось загрузить фото";
         emptyMsg.style.fontSize = "20px";
-        emptyMsg.style.marginTop = "60px";
+        emptyMsg.style.marginTop = "50px";
         voteFeed.appendChild(emptyMsg);
 
         voteFeed.style.display="flex";
@@ -346,7 +345,7 @@ function closeVoteFeed(){
 }
 
 document.getElementById("vote").onclick = openVoteFeed;
-document.getElementById("vote-close").onclick = closeVoteFeed;
+voteClose.onclick = closeVoteFeed;
 </script>
 
 </body>
