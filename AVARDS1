@@ -53,14 +53,16 @@ def upload():
 def photos():
     files = os.listdir(UPLOAD_FOLDER)
     images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
+    # возвращаем относительные пути, чтобы JS мог их подставить
     return jsonify(images)
 
 # ======== ЗАПУСК ========
 if __name__ == "__main__":
     def run_flask():
         app.run(host="0.0.0.0", port=5000)
+
     Thread(target=run_flask).start()
-    
+
     print("Telegram бот запущен...")
     updater.start_polling()
     updater.idle()
