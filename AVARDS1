@@ -1,76 +1,68 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Animal Fest Moldova 2026</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-/* ...весь твой CSS как был... */
-</style>
-</head>
-<body>
+from flask import Flask, request, jsonify, send_from_directory
+from telegram.ext import Updater, CommandHandler
+import os
+from threading import Thread
 
-<input type="file" id="photoInput" accept="image/*" style="display:none">
+# ======== НАСТРОЙКИ ========
+TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
 
-<div id="splash">
-    <div class="splash-bg">
-        <img src="img/Кошка с букетом.jpeg" alt="Animal Fest" class="splash-img">
-    </div>
-    <div class="partners-title">Спонсоры и партнёры</div>
-    <div class="sponsors">
-        <div id="sponsor1">AMBROS SRL</div>
-        <div id="sponsor2">Zoomagazin.md</div>
-    </div>
-</div>
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-<div id="prize-bar-container">
-    <div id="prize-bar-fill"></div>
-    <div id="prize-bar-text">Призовой фонд: <span id="prize-amount">20000</span> лей</div>
-</div>
-<div id="shelter-bar-container">
-    <div id="shelter-bar-fill"></div>
-    <div id="shelter-bar-text">Помощь приютам: <span id="shelter-amount">0</span> лей</div>
-</div>
+app = Flask(__name__)
 
-<div id="main-content">
-    <img src="img/20260117_213955.jpg" alt="Animal Fest" class="festival-title">
+# ======== TELEGRAM БОТ ========
+updater = Updater(TOKEN, use_context=True)
+dispatcher = updater.dispatcher
 
-    <div class="paw-container">
-      <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="addPhoto" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Добавить фото</div>
+def start(update, context):
+    update.message.reply_text(
+        "Бот запущен! Отправьте фото или откройте мини-приложение."
+    )
 
-        <button class="paw-btn" id="increaseRating" style="background-image: url('img/Синяя лапка.jpeg');"></button>
-        <div class="paw-label">Подними свой рейтинг</div>
-      </div>
+dispatcher.add_handler(CommandHandler("start", start))
 
-      <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-        <button class="paw-btn" id="vote" style="background-image: url('img/°•♡Pata de gato♡•°.jpeg');"></button>
-        <div class="paw-label">Голосовать</div>
+# ======== FLASK МАРШРУТЫ ========
 
-        <button class="paw-btn" id="increaseFund" style="background-image: url('img/Синяя лапка.jpeg');"></button>
-        <div class="paw-label">Увеличь сумму призового фонда</div>
-      </div>
-    </div>
+# Главная страница
+@app.route("/")
+def index():
+    return send_from_directory(BASE_DIR, "index.html")
 
-    <div id="vote-feed">
-        <div id="vote-close">&times;</div>
-    </div>
+# Раздача загруженных картинок
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
-    <div class="center-extra">
-        <button class="paw-btn" id="helpShelters" style="background-image: url('img/Разноцветное сердечко.jpeg');"></button>
-        <div class="paw-label">Смотри и помогай приютам</div>
-    </div>
+# Приём фото
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "photo" not in request.files:
+        return jsonify({"error": "Файл не найден"}), 400
 
-    <div class="sponsors">
-        <div>Ambros SRL</div>
-        <div>Zoomagazin.md</div>
-    </div>
-</div>
+    file = request.files["photo"]
+    if file.filename == "":
+        return jsonify({"error": "Пустое имя файла"}), 400
 
-<script>
-/* ...твой JS код полностью как был, включая обработку кнопки голосовать и крестика ... */
-</script>
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+    return jsonify({"success": True, "filename": file.filename})
 
-</body>
-</html>
+# Список фото для голосования
+@app.route("/photos", methods=["GET"])
+def photos():
+    files = os.listdir(UPLOAD_FOLDER)
+    images = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
+    return jsonify(images)  # Возвращаем имена файлов, как ждёт index.html
+
+# ======== ЗАПУСК ========
+if __name__ == "__main__":
+    def run_flask():
+        app.run(host="0.0.0.0", port=5000)
+
+    Thread(target=run_flask).start()
+
+    print("Telegram бот запущен...")
+    updater.start_polling()
+    updater.idle()
