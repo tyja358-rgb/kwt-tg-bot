@@ -1,58 +1,61 @@
+# bot.py
 from flask import Flask, request, jsonify, send_from_directory
-import os
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import os
 
-UPLOAD_FOLDER = 'uploads'
-
-# Создаём папку, если нет
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# ======== Настройки ========
+TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# ======= ROUTES =======
-@app.route('/upload', methods=['POST'])
-def upload():
-    if 'photo' not in request.files:
-        return jsonify({'status':'error', 'message':'No file part'})
-    file = request.files['photo']
-    if file.filename == '':
-        return jsonify({'status':'error', 'message':'No selected file'})
-    filename = file.filename
-    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(save_path)
-    return jsonify({'status':'ok', 'filename': filename})
-
-@app.route('/photos', methods=['GET'])
-def photos():
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    files = [f"{UPLOAD_FOLDER}/{f}" for f in files if f.lower().endswith(('.jpg','.jpeg','.png'))]
-    files.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # новые сверху
-    return jsonify(files)
-
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-# ======= TELEGRAM BOT =======
-TOKEN = 'ВАШ_ТОКЕН_ТЕЛЕГРАМ'
-
+# ======== Telegram Bot ========
 updater = Updater(TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
+# Пример команды /start
 def start(update, context):
-    update.message.reply_text("Бот запущен...")
+    update.message.reply_text("Бот запущен! Отправьте фото или используйте миниапку.")
 
 dispatcher.add_handler(CommandHandler("start", start))
 
-# ======= RUN =======
+# ======== Flask маршруты ========
+
+# Загрузка фото
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "photo" not in request.files:
+        return jsonify({"error": "Файл не найден"}), 400
+    file = request.files["photo"]
+    filename = file.filename
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    return jsonify({"success": True, "filename": filename})
+
+# Получить список всех фото
+@app.route("/photos", methods=["GET"])
+def photos():
+    files = os.listdir(UPLOAD_FOLDER)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)), reverse=True)
+    urls = [f"uploads/{f}" for f in files]
+    return jsonify(urls)
+
+# Раздача загруженных фото
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+# ======== Запуск ========
 if __name__ == "__main__":
     from threading import Thread
+
+    # Flask в отдельном потоке
     def run_flask():
         app.run(host="0.0.0.0", port=5000)
+
     Thread(target=run_flask).start()
-    
-    print("Бот Telegram запущен...")
+
+    print("Бот запущен...")
     updater.start_polling()
     updater.idle()
