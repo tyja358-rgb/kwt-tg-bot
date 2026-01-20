@@ -1,74 +1,57 @@
-import os
 from flask import Flask, request, jsonify, send_from_directory
-from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging
+import os
 
-# ======= НАСТРОЙКИ =======
-TOKEN = "8541224917:AAHPIVj9CCp1cQrXlMSB1Fs7rB3XvpntGMw"  # твой токен
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-# ======= ЛОГИ =======
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-# ======= FLASK =======
+# ====== Настройка Flask ======
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# API для загрузки фото
+# Хранение всех фото для ленты
+photo_list = []
+
 @app.route("/upload", methods=["POST"])
 def upload_photo():
-    if "photo" not in request.files:
-        return jsonify({"status": "error", "message": "No photo part"})
-    file = request.files["photo"]
-    if file.filename == "":
-        return jsonify({"status": "error", "message": "No selected file"})
-    save_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-    file.save(save_path)
+    file = request.files.get("photo")
+    if not file:
+        return jsonify({"status": "error", "message": "No file"}), 400
+
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+
+    # Сохраняем путь для ленты
+    photo_list.append(file.filename)
     return jsonify({"status": "ok", "filename": file.filename})
 
-# API для получения всех фото
 @app.route("/photos", methods=["GET"])
 def get_photos():
-    files = sorted(os.listdir(app.config["UPLOAD_FOLDER"]), reverse=True)
-    return jsonify([f"uploads/{file}" for file in files])
+    return jsonify(photo_list)
 
-# Для теста сервера
-@app.route("/")
-def index():
-    return "Bot Flask server is running!"
+@app.route("/uploads/<filename>")
+def serve_photo(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
-# ======= TELEGRAM BOT =======
-bot = Bot(token=TOKEN)
-updater = Updater(token=TOKEN, use_context=True)
+# ====== Настройка Telegram бота ======
+TOKEN = "ВАШ_ТОКЕН_ТЕЛЕГРАМ"  # вставьте сюда токен
+updater = Updater(TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
-# Команда /start
 def start(update, context):
-    update.message.reply_text("Бот запущен! WebApp готов.")
+    update.message.reply_text("Бот запущен!")
 
 dispatcher.add_handler(CommandHandler("start", start))
 
-# Обработка всех текстовых сообщений
-def echo(update, context):
-    update.message.reply_text("Я получаю сообщения, но WebApp работает через кнопки.")
-
-dispatcher.add_handler(MessageHandler(Filters.text, echo))
-
-# ======= ЗАПУСК БОТА И FLASK =======
+# ====== Запуск ======
 if __name__ == "__main__":
-    # Запускаем Flask в отдельном потоке
     from threading import Thread
+
+    # Запуск Flask в отдельном потоке
     def run_flask():
         app.run(host="0.0.0.0", port=5000)
+
     Thread(target=run_flask).start()
 
-    # Запускаем Telegram polling
-    updater.start_polling()
+    # Запуск Telegram бота
     print("Бот запущен...")
+    updater.start_polling()
     updater.idle()
