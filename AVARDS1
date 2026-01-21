@@ -1,82 +1,17 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler
-import requests
+return jsonify({
+    "win": False,
+    "pool": LET_POOL,
+    "message": f"Вы нажали кнопку {button}. В пул добавлено +5 LET"
+})
 
-TOKEN = "8389490742:AAGXDGWxGCdREk4peI3I8fPU1cGMBpdaHvM"
-API_URL = "https://Moldova2026.pythonanywhere.com"
 
-def start(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    requests.post(f"{API_URL}/join", json={
-        "user_id": user_id
+@app.route("/pool")
+def pool():
+    return jsonify({
+        "LET_pool": LET_POOL
     })
-    update.message.reply_text(
-        "⚡️ Добро пожаловать в LET Energy\n"
-        "Ты подключён к общей энергосети.\n\n"
-        "Команды:\n"
-        "/pool — общий пул энергии\n"
-        "/play — начать игру\n"
-        "/press — выбрать кнопку"
-    )
 
-def pool(update: Update, context: CallbackContext):
-    r = requests.get(f"{API_URL}/pool").json()
-    update.message.reply_text(
-        f"🔋 Общий пул энергии: {r['LET_pool']} LET"
-    )
 
-def play(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "🎮 Игра скоро будет доступна.\n"
-        "Сейчас мы подключаем кнопки."
-    )
-
-# ======= ДОБАВЛЕНО: команда /press с кнопками =======
-def press(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-
-    keyboard = []
-    for i in range(1, 31):
-        keyboard.append([InlineKeyboardButton(str(i), callback_data=str(i))])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
-        "Выберите кнопку (1–30):",
-        reply_markup=reply_markup
-    )
-
-def button_callback(update, context):
-    query = update.callback_query
-    query.answer()
-
-    user_id = query.from_user.id
-    button = int(query.data)
-
-    r = requests.post(f"{API_URL}/click", json={
-        "user_id": user_id,
-        "button": button
-    }).json()
-
-    query.edit_message_text(
-        text=r["message"] + f"\n🔋 Общий пул: {r.get('pool', r.get('energy'))} LET"
-    )
-# ================================================
-
-def main():
-    updater = Updater(TOKEN)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("pool", pool))
-    dp.add_handler(CommandHandler("play", play))
-
-    # ======= ДОБАВЛЕНО: обработчик кнопок =======
-    dp.add_handler(CommandHandler("press", press))
-    dp.add_handler(CallbackQueryHandler(button_callback))
-    # ============================================
-
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+@app.route("/")
+def index():
+    return "LET Energy работает"
