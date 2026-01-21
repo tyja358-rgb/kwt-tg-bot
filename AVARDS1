@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 import requests
 
-TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
+TOKEN = "8389490742:AAGXDGWxGCdREk4peI3I8fPU1cGMBpdaHvM"
 API_URL = "https://Moldova2026.pythonanywhere.com"
 
 def start(update: Update, context: CallbackContext):
