@@ -1,1 +1,25 @@
 
+@app.route("/click", methods=["POST"])
+def click():
+    global LET_POOL
+    user_id = request.json["user_id"]
+    button = request.json["button"]
+
+    # Каждое нажатие даёт 5 LET
+    LET_POOL += 5
+
+    # Проверяем, угадал ли игрок своё число
+    if PLAYERS.get(user_id) == button:
+        win = LET_POOL
+        LET_POOL = 0
+        return jsonify({
+            "win": True,
+            "energy": win,
+            "message": f"🎉 Поздравляем! Вы угадали число {button} и забираете весь пул LET!"
+        })
+
+    return jsonify({
+        "win": False,
+        "pool": LET_POOL,
+        "message": f"Вы нажали кнопку {button}. В пул добавлено +5 LET"
+    })
