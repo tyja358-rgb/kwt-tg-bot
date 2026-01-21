@@ -3,7 +3,7 @@ import random
 
 app = Flask(__name__)
 
-BANK = 0
+LET_POOL = 0
 PLAYERS = {}
 
 @app.route("/join", methods=["POST"])
@@ -14,28 +14,33 @@ def join():
         PLAYERS[user_id] = random.randint(1, 30)
 
     return jsonify({
-        "message": "joined",
+        "status": "joined",
         "your_number": PLAYERS[user_id]
     })
 
 @app.route("/click", methods=["POST"])
 def click():
-    global BANK
+    global LET_POOL
     user_id = request.json["user_id"]
     button = request.json["button"]
 
-    BANK += 5
+    LET_POOL += 5  # 5 LET энергии
 
     if PLAYERS.get(user_id) == button:
-        win = BANK
-        BANK = 0
-        return jsonify({"win": True, "amount": win})
+        win = LET_POOL
+        LET_POOL = 0
+        return jsonify({
+            "win": True,
+            "energy": win
+        })
 
-    return jsonify({"win": False, "bank": BANK})
+    return jsonify({
+        "win": False,
+        "pool": LET_POOL
+    })
 
-@app.route("/bank")
-def bank():
-    return jsonify({"bank": BANK})
-
-if __name__ == "__main__":
-    app.run()
+@app.route("/pool")
+def pool():
+    return jsonify({
+        "LET_pool": LET_POOL
+    })
