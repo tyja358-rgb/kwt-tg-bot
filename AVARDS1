@@ -1,46 +1,47 @@
-from flask import Flask, request, jsonify
-import random
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+import requests
 
-app = Flask(__name__)
+TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
+API_URL = "https://Moldova2026.pythonanywhere.com"
 
-LET_POOL = 0
-PLAYERS = {}
+def start(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
 
-@app.route("/join", methods=["POST"])
-def join():
-    user_id = request.json["user_id"]
-
-    if user_id not in PLAYERS:
-        PLAYERS[user_id] = random.randint(1, 30)
-
-    return jsonify({
-        "status": "joined",
-        "your_number": PLAYERS[user_id]
+    requests.post(f"{API_URL}/join", json={
+        "user_id": user_id
     })
 
-@app.route("/click", methods=["POST"])
-def click():
-    global LET_POOL
-    user_id = request.json["user_id"]
-    button = request.json["button"]
+    update.message.reply_text(
+        "⚡ Добро пожаловать в LET Energy\n"
+        "Ты подключён к общей энергосети.\n\n"
+        "Команды:\n"
+        "/pool — общий пул энергии\n"
+        "/play — начать игру"
+    )
 
-    LET_POOL += 5  # 5 LET энергии
+def pool(update: Update, context: CallbackContext):
+    r = requests.get(f"{API_URL}/pool").json()
+    update.message.reply_text(
+        f"🔋 Общий пул энергии: {r['LET_pool']} LET"
+    )
 
-    if PLAYERS.get(user_id) == button:
-        win = LET_POOL
-        LET_POOL = 0
-        return jsonify({
-            "win": True,
-            "energy": win
-        })
+def play(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "🎮 Игра скоро будет доступна.\n"
+        "Сейчас мы подключаем кнопки."
+    )
 
-    return jsonify({
-        "win": False,
-        "pool": LET_POOL
-    })
+def main():
+    updater = Updater(TOKEN)
+    dp = updater.dispatcher
 
-@app.route("/pool")
-def pool():
-    return jsonify({
-        "LET_pool": LET_POOL
-    })
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("pool", pool))
+    dp.add_handler(CommandHandler("play", play))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
