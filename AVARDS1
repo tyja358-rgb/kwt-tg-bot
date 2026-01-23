@@ -1,17 +1,41 @@
-return jsonify({
-    "win": False,
-    "pool": LET_POOL,
-    "message": f"Вы нажали кнопку {button}. В пул добавлено +5 LET"
-})
+// ===== НАЧАЛО: ДВИЖЕНИЕ УДЕРЖИВАНИЕМ СТРЕЛОК =====
+let step = 0.0001;        // шаг движения
+let moveInterval = null;   // интервал движения
 
+function movePlayer(dLat, dLng) {
+    pointLat += dLat;
+    pointLng += dLng;
+    userMarker.setLatLng([pointLat, pointLng]);
+    map.setView([pointLat, pointLng]);
+}
 
-@app.route("/pool")
-def pool():
-    return jsonify({
-        "LET_pool": LET_POOL
-    })
+function startMove(dLat, dLng) {
+    if (moveInterval) clearInterval(moveInterval);
+    moveInterval = setInterval(() => movePlayer(dLat, dLng), 50); // каждые 50 мс
+}
 
+function stopMove() {
+    if (moveInterval) clearInterval(moveInterval);
+    moveInterval = null;
+}
 
-@app.route("/")
-def index():
-    return "LET Energy работает"
+['up', 'down', 'left', 'right'].forEach(id => {
+    const btn = document.getElementById(id);
+    let dLat = 0, dLng = 0;
+
+    if (id === 'up') dLat = step;
+    if (id === 'down') dLat = -step;
+    if (id === 'left') dLng = -step;
+    if (id === 'right') dLng = step;
+
+    btn.addEventListener('mousedown', () => startMove(dLat, dLng));
+    btn.addEventListener('mouseup', stopMove);
+    btn.addEventListener('mouseleave', stopMove);
+
+    btn.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        startMove(dLat, dLng); 
+    });
+    btn.addEventListener('touchend', stopMove);
+});
+// ===== КОНЕЦ: ДВИЖЕНИЕ УДЕРЖИВАНИЕМ СТРЕЛОК =====
