@@ -1,5 +1,4 @@
-
 document.getElementById('message').textContent =
     playerAds < p.adsRequired
-    ? Нужно рекламы: ${p.adsRequired - playerAds}
-    : Готово к сбору: +${p.power} ват;
+    ? `Нужно рекламы: ${p.adsRequired - playerAds}`
+    : `Готово к сбору: +${p.power} ват`;
