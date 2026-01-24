@@ -1,4 +1,58 @@
-document.getElementById('message').textContent =
-    playerAds < p.adsRequired
-    ? `Нужно рекламы: ${p.adsRequired - playerAds}`
-    : `Готово к сбору: +${p.power} ват`;
+// ===== Базовая точка =====
+const baseLat = 47.0100;
+const baseLng = 28.8638;
+
+// ===== Старт игрока =====
+let playerLat = baseLat;
+let playerLng = baseLng;
+
+let map, userMarker;
+let points = [];
+let activePoint = null;
+
+// ================== ИНИЦИАЛИЗАЦИЯ КАРТЫ ==================
+function initMap() {
+    map = L.map('map').setView([playerLat, playerLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // Маркер игрока
+    userMarker = L.marker([playerLat, playerLng])
+        .addTo(map)
+        .bindPopup("Вы здесь")
+        .openPopup();
+
+    generatePoints(); // создаём точки
+}
+
+// ================== ТОЧКИ ==================
+function generatePoints() {
+    points = [];
+    const TOTAL_POINTS = 50; // для проверки можно 50 точек
+    const COLORS = ['#00ff99','#ffd700','#ff5555','#00aaff','#cc66ff'];
+
+    for(let i=0; i<TOTAL_POINTS; i++){
+        const distMeters = Math.random()*1000 + 50; // случайное расстояние 50-1050 м
+        const distDeg = distMeters / 111320;
+        const angle = Math.random() * Math.PI * 2;
+        const lat = baseLat + distDeg * Math.cos(angle);
+        const lng = baseLng + distDeg * Math.sin(angle);
+
+        const marker = L.circleMarker([lat, lng], {
+            radius: 6,
+            color: COLORS[i % COLORS.length],
+            fillOpacity: 0.9
+        }).addTo(map);
+
+        // добавляем точку в массив
+        const point = { lat, lng, marker, collected:false, power: Math.floor(distMeters/10), adsRequired:1 };
+        points.push(point);
+
+        // клик на точку
+        marker.on('click', () => {
+            openPointModal(point);
+        });
+    }
+}
