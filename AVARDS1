@@ -187,6 +187,7 @@ function generatePoints() {
 function openPointModal(point){
     activePoint = point;
     movingToPoint = false;
+    playerAds = 0;
 
     const d = distance(playerLat, playerLng, point.lat, point.lng);
     const adsNeeded = Math.ceil(d / 100);
@@ -194,12 +195,18 @@ function openPointModal(point){
 
     document.getElementById('pm-info').textContent =
         `Расстояние до точки: ${Math.round(d)} м. Нужно рекламы: ${adsNeeded}`;
+    
+    // ===== СЧЁТЧИК РЕКЛАМЫ =====
+    const adsCounter = document.getElementById('ads-count');
+    adsCounter.textContent = 0;
 
     document.getElementById('point-modal').style.display = 'flex';
 
     const adBtn = document.getElementById('pm-ad-btn');
     adBtn.onclick = ()=>{
         playerAds++;
+        adsCounter.textContent = playerAds; // обновляем счётчик
+
         if(playerAds >= point.adsRequired){
             point.collected = true;
             playerPower += point.power;
@@ -208,8 +215,6 @@ function openPointModal(point){
             document.getElementById('point-modal').style.display = 'none';
             movingToPoint = true;
             activePoint = null;
-        } else {
-            alert(`Нужно ещё ${point.adsRequired - playerAds} рекламы`);
         }
     }
 }
@@ -335,6 +340,7 @@ showSplashThenMap();
   ">
     <h3>📍 Энергетическая точка</h3>
     <p id="pm-info">Информация о точке</p>
+    <p>Просмотрено рекламы: <span id="ads-count">0</span></p>
     <button class="btn" id="pm-ad-btn">Смотреть рекламу</button>
     <button class="btn" onclick="closePointModal()">Закрыть</button>
   </div>
