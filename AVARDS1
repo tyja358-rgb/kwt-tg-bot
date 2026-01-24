@@ -1,2 +1,1 @@
-document.getElementById('pm-info').textContent =
-    `Расстояние до точки: ${Math.round(d)} м. Нужно рекламы: ${adsNeeded}`;
+alert(`Нужно ещё ${remaining} рекламы`);
