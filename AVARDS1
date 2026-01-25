@@ -1,9 +1,44 @@
-<div id="point-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:20000;">
-  <div style="background:#1b002b; padding:20px; border-radius:12px; width:90%; max-width:320px; text-align:center; border:2px solid gold;">
-    <h3>📍 Энергетическая точка</h3>
-    <p id="pm-info">Информация о точке</p>
-    <p>Просмотрено рекламы: <span id="ads-count">0</span></p>
-    <button class="btn" id="pm-ad-btn">Смотреть рекламу</button>
-    <button class="btn" onclick="closePointModal()">Закрыть</button>
-  </div>
-</div>
+function openPointModal(point){
+    activePoint = point;
+
+    const modal = document.getElementById('point-modal');
+    modal.style.display = 'flex';
+
+    // Считаем текущую дистанцию до игрока
+    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+
+    // Динамическая мощность точки по расстоянию
+    let power = 0;
+    if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
+
+    // Сколько рекламы нужно посмотреть
+    const adsRequired = Math.max(1, Math.ceil(dist / 50));
+
+    // Сохраняем в объект точки
+    point.power = power;
+    point.adsRequired = adsRequired;
+
+    document.getElementById('pm-info').innerHTML =
+        `Расстояние: ${dist.toFixed(1)} м<br>
+         Нужно рекламы: ${point.adsRequired}<br>
+         Мощность: ${point.power.toFixed(1)} ват`;
+
+    document.getElementById('ads-count').textContent = playerAds;
+
+    const adBtn = document.getElementById('pm-ad-btn');
+    adBtn.onclick = ()=>{
+        playerAds++;
+        document.getElementById('ads-count').textContent = playerAds;
+
+        // Собираем точку только если близко и достаточно рекламы
+        if(!point.collected && dist < 15 && playerAds >= point.adsRequired){
+            point.collected = true;
+            playerPower += point.power;
+            document.getElementById('power-total').textContent = playerPower.toFixed(1);
+            savePlayerPower();
+            map.removeLayer(point.marker);
+            closePointModal();
+            alert(`Точка собрана! Получено ${point.power.toFixed(1)} ват`);
+        }
+    };
+}
