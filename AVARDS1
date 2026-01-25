@@ -1,14 +1,26 @@
 function openPointModal(point){
-    activePoint = point;
-    document.getElementById('point-modal').style.display = 'flex';
-    document.getElementById('pm-info').textContent = `Мощность: ${point.power.toFixed(1)}`;
+    activePoint = point;  // сохраняем текущую точку
+
+    const modal = document.getElementById('point-modal');
+    modal.style.display = 'flex';
+
+    // Считаем расстояние до точки
+    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+
+    // Обновляем инфо в модальном окне
+    document.getElementById('pm-info').innerHTML = 
+        `Расстояние: ${dist.toFixed(1)} м<br>
+         Нужно рекламы: ${point.adsRequired}<br>
+         Мощность: ${point.power.toFixed(1)} ват`;
+
     document.getElementById('ads-count').textContent = playerAds;
-    
-    // кнопка внутри модального окна
+
+    // Кнопка внутри модального окна
     const adBtn = document.getElementById('pm-ad-btn');
     adBtn.onclick = ()=>{
         playerAds++;
-        if(!point.collected && playerAds >= point.adsRequired){
+        // проверка сбора точки: расстояние и реклама
+        if(!point.collected && dist < 15 && playerAds >= point.adsRequired){
             point.collected = true;
             playerPower += point.power;
             document.getElementById('power-total').textContent = playerPower.toFixed(1);
@@ -16,13 +28,10 @@ function openPointModal(point){
             savePlayerPower();
             map.removeLayer(point.marker);
             closePointModal();
+            alert(`Точка собрана! Получено ${point.power.toFixed(1)} ват`);
         } else {
+            // обновляем счётчик рекламы
             document.getElementById('ads-count').textContent = playerAds;
         }
     };
-}
-
-function closePointModal(){
-    document.getElementById('point-modal').style.display = 'none';
-    activePoint = null;
 }
