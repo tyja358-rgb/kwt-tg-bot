@@ -1,61 +1,66 @@
 function openPointModal(point){
     activePoint = point;
+    point.adsViewed = 0; // сброс просмотров для этой точки
+
     const modal = document.getElementById('point-modal');
     modal.style.display = 'flex';
 
     // Считаем текущую дистанцию до игрока
     const dist = distance(playerLat, playerLng, point.lat, point.lng);
 
-    // Динамическая мощность точки по расстоянию (пример: 310 м -> 12 ват)
+    // Динамическая мощность точки (пример: 310 м -> 12 ват)
     let power = 0;
     if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
 
-    // Сколько рекламы нужно посмотреть (1 реклама на 100 м)
+    // Сколько рекламы нужно (1 на 100 м)
     const adsRequired = Math.max(1, Math.ceil(dist / 100));
 
-    // Сохраняем в объект точки
+    // Сохраняем данные точки
     point.power = power;
     point.adsRequired = adsRequired;
 
-    // Обновляем информацию в модальном окне
+    // Обновляем модальное окно
     document.getElementById('pm-info').innerHTML =
         `Расстояние: ${dist.toFixed(1)} м<br>
          Нужно рекламы: ${point.adsRequired}<br>
          Мощность: ${point.power.toFixed(1)} ват`;
-
-    document.getElementById('ads-count').textContent = playerAds;
+    document.getElementById('ads-count').textContent = point.adsViewed;
 
     const adBtn = document.getElementById('pm-ad-btn');
     adBtn.onclick = ()=>{
-        playerAds++;
-        document.getElementById('ads-count').textContent = playerAds;
+        point.adsViewed++;
+        document.getElementById('ads-count').textContent = point.adsViewed;
 
-        // Собираем точку только если близко и достаточно рекламы
-        if(!point.collected && dist < 15 && playerAds >= point.adsRequired){
+        // Если просмотры достигли нужного количества — собираем точку
+        if(point.adsViewed >= point.adsRequired){
             collectPoint(point, "через просмотр рекламы");
         }
     };
 }
 
-// Вынес сбор точки в отдельную функцию, чтобы можно было вызывать и при закрытии окна
+// Вынес сбор точки в отдельную функцию
 function collectPoint(point, reason=""){
     if(point.collected) return;
     point.collected = true;
+
     playerPower += point.power;
     document.getElementById('power-total').textContent = playerPower.toFixed(1);
     savePlayerPower();
-    map.removeLayer(point.marker);
-    closePointModal();
+
+    if(point.marker) map.removeLayer(point.marker);
+
+    closePointModal(true); // true = сбор автоматически
     alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
 }
 
-// Переписываем closePointModal, чтобы точка собиралась автоматически при закрытии
-function closePointModal(){
+// Переписываем closePointModal
+function closePointModal(autoCollect=false){
     if(activePoint && !activePoint.collected){
-        if(playerAds >= activePoint.adsRequired){
+        if(autoCollect || activePoint.adsViewed >= activePoint.adsRequired){
             collectPoint(activePoint, "автоматически при закрытии");
         }
     }
+
     document.getElementById('point-modal').style.display = 'none';
     activePoint = null;
 }
