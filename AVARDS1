@@ -1,81 +1,27 @@
-function openPointModal(point){
-    activePoint = point;
-    point.adsViewed = 0; // сброс просмотров для этой точки
+function sellStation(id){
+    const st = stationsData[id];
+    if(!st) return;
 
-    const modal = document.getElementById('point-modal');
-    modal.style.display = 'flex';
+    if(st.owner != playerId){
+        alert("Это чужая станция продать нельзя!");
+        return;
+    }
 
-    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+    const sellPrice = st.power * 2;
+    playerCash += sellPrice;
+    document.getElementById('cash-total').textContent = playerCash.toFixed(1);
 
-    // Динамическая мощность точки (например 310 м -> 12 ват)
-    let power = 0;
-    if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
+    if(stationMarkers[id]){
+        map.removeLayer(stationMarkers[id]);
+        delete stationMarkers[id];
+    }
 
-    const adsRequired = Math.max(1, Math.ceil(dist / 100));
+    delete stationsData[id];
 
-    point.power = power;
-    point.adsRequired = adsRequired;
+    myStationsCount--;
+    document.getElementById('stations-count').textContent = myStationsCount;
 
-    document.getElementById('pm-info').innerHTML =
-        `Расстояние: ${dist.toFixed(1)} м<br>
-         Нужно рекламы: ${point.adsRequired}<br>
-         Мощность: ${point.power.toFixed(1)} ват`;
-    document.getElementById('ads-count').textContent = point.adsViewed;
+    localStorage.setItem("playerCash", playerCash);
 
-    const adBtn = document.getElementById('pm-ad-btn');
-    adBtn.onclick = ()=>{
-        point.adsViewed++;
-        document.getElementById('ads-count').textContent = point.adsViewed;
-
-        // Проверяем, достигнут ли лимит рекламы
-        if(point.adsViewed >= point.adsRequired){
-            // Закрываем модальное окно
-            modal.style.display = 'none';
-            activePoint = null;
-
-            // Запускаем движение к точке и сбор
-            movePlayerToPoint(point, ()=>collectPoint(point, "через просмотр рекламы"));
-        }
-    };
-}
-
-// Двигаем игрока к точке
-function movePlayerToPoint(point, callback){
-    const speed = 0.00005; // скорость движения
-    const moveInterval = setInterval(()=>{
-        const dx = point.lng - playerLng;
-        const dy = point.lat - playerLat;
-        const dist = Math.hypot(dx, dy);
-
-        if(dist < 0.00005){ // дошли до точки
-            clearInterval(moveInterval);
-            if(callback) callback();
-            return;
-        }
-
-        playerLat += dy * speed / dist;
-        playerLng += dx * speed / dist;
-        userMarker.setLatLng([playerLat, playerLng]);
-        map.setView([playerLat, playerLng], map.getZoom(), {animate:false});
-    }, 50);
-}
-
-// Сбор точки
-function collectPoint(point, reason=""){
-    if(point.collected) return;
-    point.collected = true;
-
-    playerPower += point.power;
-    document.getElementById('power-total').textContent = playerPower.toFixed(1);
-    savePlayerPower();
-
-    if(point.marker) map.removeLayer(point.marker);
-
-    alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
-}
-
-// Закрытие модального окна вручную (ничего не собираем)
-function closePointModal(){
-    document.getElementById('point-modal').style.display = 'none';
-    activePoint = null;
+    alert(`Станция продана! Получено ${sellPrice.toFixed(1)} кэша`);
 }
