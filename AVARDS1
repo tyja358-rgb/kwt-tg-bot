@@ -1,44 +1,11 @@
-function openPointModal(point){
-    activePoint = point;
+// ===== Расчёт мощности точки =====
+function calculatePower(distMeters){
+    if(distMeters < 100) return 0; // до 100 м — мощность 0
+    const hundreds = Math.floor((distMeters - 1)/100); // 100-199 -> 1 сотня, 200-299 -> 2 сотни
+    return hundreds * 4; // 4 ват за каждую сотню после первой
+}
 
-    const modal = document.getElementById('point-modal');
-    modal.style.display = 'flex';
-
-    // Считаем текущую дистанцию до игрока
-    const dist = distance(playerLat, playerLng, point.lat, point.lng);
-
-    // Динамическая мощность точки по расстоянию
-    let power = 0;
-    if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
-
-    // Сколько рекламы нужно посмотреть
-    const adsRequired = Math.max(1, Math.ceil(dist / 50));
-
-    // Сохраняем в объект точки
-    point.power = power;
-    point.adsRequired = adsRequired;
-
-    document.getElementById('pm-info').innerHTML =
-        `Расстояние: ${dist.toFixed(1)} м<br>
-         Нужно рекламы: ${point.adsRequired}<br>
-         Мощность: ${point.power.toFixed(1)} ват`;
-
-    document.getElementById('ads-count').textContent = playerAds;
-
-    const adBtn = document.getElementById('pm-ad-btn');
-    adBtn.onclick = ()=>{
-        playerAds++;
-        document.getElementById('ads-count').textContent = playerAds;
-
-        // Собираем точку только если близко и достаточно рекламы
-        if(!point.collected && dist < 15 && playerAds >= point.adsRequired){
-            point.collected = true;
-            playerPower += point.power;
-            document.getElementById('power-total').textContent = playerPower.toFixed(1);
-            savePlayerPower();
-            map.removeLayer(point.marker);
-            closePointModal();
-            alert(`Точка собрана! Получено ${point.power.toFixed(1)} ват`);
-        }
-    };
+// ===== Рассчёт рекламы =====
+function calculateAds(distMeters){
+    return Math.floor(distMeters / 100) + 1; // 0-100 м -> 1 реклама, 101-200 -> 2, 201-300 -> 3
 }
