@@ -5,21 +5,16 @@ function openPointModal(point){
     const modal = document.getElementById('point-modal');
     modal.style.display = 'flex';
 
-    // Считаем текущую дистанцию до игрока
     const dist = distance(playerLat, playerLng, point.lat, point.lng);
 
-    // Динамическая мощность точки (пример: 310 м -> 12 ват)
     let power = 0;
     if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
 
-    // Сколько рекламы нужно (1 на 100 м)
     const adsRequired = Math.max(1, Math.ceil(dist / 100));
 
-    // Сохраняем данные точки
     point.power = power;
     point.adsRequired = adsRequired;
 
-    // Обновляем модальное окно
     document.getElementById('pm-info').innerHTML =
         `Расстояние: ${dist.toFixed(1)} м<br>
          Нужно рекламы: ${point.adsRequired}<br>
@@ -31,14 +26,36 @@ function openPointModal(point){
         point.adsViewed++;
         document.getElementById('ads-count').textContent = point.adsViewed;
 
-        // Если просмотры достигли нужного количества — собираем точку
         if(point.adsViewed >= point.adsRequired){
-            collectPoint(point, "через просмотр рекламы");
+            // начинаем движение к точке перед сбором
+            movePlayerToPoint(point, ()=>collectPoint(point, "через просмотр рекламы"));
         }
     };
 }
 
-// Вынес сбор точки в отдельную функцию
+// Функция движения игрока к точке
+function movePlayerToPoint(point, callback){
+    const speed = 0.00005; // скорость движения (можно подстроить)
+    let moveInterval = setInterval(()=>{
+        const dx = point.lng - playerLng;
+        const dy = point.lat - playerLat;
+        const dist = Math.hypot(dx, dy);
+
+        if(dist < 0.00005){ // дошли до точки
+            clearInterval(moveInterval);
+            if(callback) callback();
+            return;
+        }
+
+        // нормализуем движение
+        playerLat += dy * speed / dist;
+        playerLng += dx * speed / dist;
+        userMarker.setLatLng([playerLat, playerLng]);
+        map.setView([playerLat, playerLng], map.getZoom(), {animate:false});
+    }, 50);
+}
+
+// Сбор точки (не меняем)
 function collectPoint(point, reason=""){
     if(point.collected) return;
     point.collected = true;
@@ -49,15 +66,15 @@ function collectPoint(point, reason=""){
 
     if(point.marker) map.removeLayer(point.marker);
 
-    closePointModal(true); // true = сбор автоматически
+    closePointModal(true);
     alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
 }
 
-// Переписываем closePointModal
+// Закрытие модального окна (сбор автоматом)
 function closePointModal(autoCollect=false){
     if(activePoint && !activePoint.collected){
         if(autoCollect || activePoint.adsViewed >= activePoint.adsRequired){
-            collectPoint(activePoint, "автоматически при закрытии");
+            movePlayerToPoint(activePoint, ()=>collectPoint(activePoint, "автоматически при закрытии"));
         }
     }
 
