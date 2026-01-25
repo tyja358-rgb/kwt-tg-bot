@@ -7,6 +7,7 @@ function openPointModal(point){
 
     const dist = distance(playerLat, playerLng, point.lat, point.lng);
 
+    // Динамическая мощность точки (например 310 м -> 12 ват)
     let power = 0;
     if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
 
@@ -26,17 +27,22 @@ function openPointModal(point){
         point.adsViewed++;
         document.getElementById('ads-count').textContent = point.adsViewed;
 
+        // Проверяем, достигнут ли лимит рекламы
         if(point.adsViewed >= point.adsRequired){
-            // начинаем движение к точке перед сбором
+            // Закрываем модальное окно
+            modal.style.display = 'none';
+            activePoint = null;
+
+            // Запускаем движение к точке и сбор
             movePlayerToPoint(point, ()=>collectPoint(point, "через просмотр рекламы"));
         }
     };
 }
 
-// Функция движения игрока к точке
+// Двигаем игрока к точке
 function movePlayerToPoint(point, callback){
-    const speed = 0.00005; // скорость движения (можно подстроить)
-    let moveInterval = setInterval(()=>{
+    const speed = 0.00005; // скорость движения
+    const moveInterval = setInterval(()=>{
         const dx = point.lng - playerLng;
         const dy = point.lat - playerLat;
         const dist = Math.hypot(dx, dy);
@@ -47,7 +53,6 @@ function movePlayerToPoint(point, callback){
             return;
         }
 
-        // нормализуем движение
         playerLat += dy * speed / dist;
         playerLng += dx * speed / dist;
         userMarker.setLatLng([playerLat, playerLng]);
@@ -55,7 +60,7 @@ function movePlayerToPoint(point, callback){
     }, 50);
 }
 
-// Сбор точки (не меняем)
+// Сбор точки
 function collectPoint(point, reason=""){
     if(point.collected) return;
     point.collected = true;
@@ -66,18 +71,11 @@ function collectPoint(point, reason=""){
 
     if(point.marker) map.removeLayer(point.marker);
 
-    closePointModal(true);
     alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
 }
 
-// Закрытие модального окна (сбор автоматом)
-function closePointModal(autoCollect=false){
-    if(activePoint && !activePoint.collected){
-        if(autoCollect || activePoint.adsViewed >= activePoint.adsRequired){
-            movePlayerToPoint(activePoint, ()=>collectPoint(activePoint, "автоматически при закрытии"));
-        }
-    }
-
+// Закрытие модального окна вручную (ничего не собираем)
+function closePointModal(){
     document.getElementById('point-modal').style.display = 'none';
     activePoint = null;
 }
