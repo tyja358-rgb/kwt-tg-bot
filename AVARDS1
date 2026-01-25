@@ -1,5 +1,9 @@
-// Функция закрытия модального окна
-function closePointModal(){
-    document.getElementById('point-modal').style.display = 'none';
-    activePoint = null;
-}
+<div id="point-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:20000;">
+  <div style="background:#1b002b; padding:20px; border-radius:12px; width:90%; max-width:320px; text-align:center; border:2px solid gold;">
+    <h3>📍 Энергетическая точка</h3>
+    <p id="pm-info">Информация о точке</p>
+    <p>Просмотрено рекламы: <span id="ads-count">0</span></p>
+    <button class="btn" id="pm-ad-btn">Смотреть рекламу</button>
+    <button class="btn" onclick="closePointModal()">Закрыть</button>
+  </div>
+</div>
