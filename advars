@@ -1,12 +1,13 @@
+// ===== Генерация точек =====
 function generatePoints() {
     points = [];
     const TOTAL_POINTS = 50;
     const COLORS = ['#00ff99', '#ffd700', '#ff5555', '#00aaff', '#cc66ff'];
 
     for (let i = 0; i < TOTAL_POINTS; i++) {
-        // шаг 100 метров, начиная с 100
-        const distMeters = 100 * ((i % 10) + 1); // 100,200,...1000, потом повторяем
-        const distDeg = distMeters / 111320;
+        // расстояние до точки от 100 до 3500 метров
+        const distMeters = 100 + Math.random() * 3400; // 100..3500
+        const distDeg = distMeters / 111320; // преобразуем в градусы
         const angle = Math.random() * Math.PI * 2; // случайный угол
         const lat = baseLat + distDeg * Math.cos(angle);
         const lng = baseLng + distDeg * Math.sin(angle);
@@ -28,14 +29,29 @@ function generatePoints() {
 
         // расчет мощности и рекламы
         point.power = calculatePower(distMeters);
-        point.adsRequired = calculateAds(distMeters);
+        point.adsRequired = calculateAds(lat, lng); // теперь по реальному расстоянию
 
         // 🔥 Лог для проверки
-        console.log(`Точка ${i + 1}: дистанция = ${distMeters} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
+        console.log(`Точка ${i + 1}: дистанция = ${distMeters.toFixed(1)} м, рекламы = ${point.adsRequired}, мощность = ${point.power.toFixed(1)}`);
 
         points.push(point);
 
         // клик по точке
         marker.on('click', () => openPointModal(point));
     }
+}
+
+// ===== Расчет рекламы =====
+function calculateAds(pointLat, pointLng) {
+    const dist = distance(playerLat, playerLng, pointLat, pointLng);
+    return Math.ceil(dist / 100); // 100 м = 1 реклама, 101-200 м = 2 рекламы и т.д.
+}
+
+// ===== Расстояние =====
+function distance(lat1, lon1, lat2, lon2){
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
