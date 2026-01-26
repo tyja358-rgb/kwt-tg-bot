@@ -1,28 +1,92 @@
-// --- ID игрока ---
-let playerId = null;
-
-// Функция, которая ждёт инициализацию Telegram WebApp
-function waitForTelegramInit(retries = 20) {
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            playerId = tg.initDataUnsafe.user.id;
-            console.log("Telegram ID:", playerId);
-            initApp(); // старт игры
+savePlayerPower();
+            if(activePoint.marker) map.removeLayer(activePoint.marker);
+            movingToPoint=false;
+            activePoint=null;
         } else {
-            alert("Ошибка: нет данных пользователя Telegram");
+            const dx=activePoint.lng-playerLng, dy=activePoint.lat-playerLat, dist=Math.hypot(dx,dy), speed=0.02;
+            playerLat+=(dy/dist)*STEP_DEGREE*1200*speed;
+            playerLng+=(dx/dist)*STEP_DEGREE*1200*speed;
+            userMarker.setLatLng([playerLat,playerLng]);
+            map.setView([playerLat,playerLng], map.getZoom(),{animate:false});
         }
-    } else if (retries > 0) {
-        // Ждём 200 мс и пробуем снова
-        setTimeout(() => waitForTelegramInit(retries - 1), 200);
     } else {
-        alert("Ошибка: откройте через Telegram WebApp");
+        playerLat+=moveY;
+        playerLng+=moveX;
+        userMarker.setLatLng([playerLat,playerLng]);
+        map.setView([playerLat,playerLng], map.getZoom(),{animate:false});
     }
+},50);
+
+// ===== Реклама для точек =====
+document.getElementById('watch-ad-btn').onclick=()=>{
+    playerAds++;
+    for(const p of points){
+        if(p.collected) continue;
+        const d=distance(playerLat,playerLng,p.lat,p.lng);
+        if(d<15 && playerAds>=p.adsRequired){
+            collectPoint(p,"через просмотр рекламы");
+        }
+    }
+};
+
+function distance(lat1,lon1,lat2,lon2){ const R=6371000; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)2; return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+
+function openPointModal(point){
+    activePoint = point;
+    point.adsViewed = 0;
+    const modal = document.getElementById('point-modal');
+    modal.style.display = 'flex';
+
+    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+
+    // Обновляем данные модального окна
+    document.getElementById('pm-info').innerHTML =
+        Расстояние: ${dist.toFixed(1)} м<br>
+         Нужно рекламы: ${point.adsRequired}<br>
+         Мощность: ${point.power.toFixed(1)} ват;
+    document.getElementById('ads-count').textContent = point.adsViewed;
+
+    const adBtn = document.getElementById('pm-ad-btn');
+    adBtn.onclick = ()=>{
+        point.adsViewed++;
+        document.getElementById('ads-count').textContent = point.adsViewed;
+        if(point.adsViewed >= point.adsRequired){
+            modal.style.display='none';
+            activePoint = null;
+            movePlayerToPoint(point, ()=>collectPoint(point,"через просмотр рекламы"));
+        }
+    };
 }
 
-// Запускаем проверку
-waitForTelegramInit();
+function movePlayerToPoint(point, callback){
+    const speed = 0.00005;
+    const moveInterval = setInterval(()=>{
+        const dx = point.lng - playerLng;
+        const dy = point.lat - playerLat;
+        const dist = Math.hypot(dx, dy);
+        if(dist < 0.00005){
+            clearInterval(moveInterval);
+            if(callback) callback();
+            return;
+        }
+        playerLat += dy * speed / dist;
+        playerLng += dx * speed / dist;
+        userMarker.setLatLng([playerLat, playerLng]);
+        map.setView([playerLat, playerLng], map.getZoom(), {animate:false});
+    },50);
+}
 
-function initApp() {
-    showSplashThenMap();
+function collectPoint(point, reason=""){
+    if(point.collected) return;
+    point.collected = true;
+    playerPower += point.power;
+    document.getElementById('power-total').textContent = playerPower.toFixed(1);
+    savePlayerPower();
+    if(point.marker) map.removeLayer(point.marker);
+    alert(Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват);
+}
+
+function closePointModal(){
+    document.getElementById('point-modal').style.display='none';
+    activePoint=null;
 }
