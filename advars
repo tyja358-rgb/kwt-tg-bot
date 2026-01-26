@@ -11,6 +11,7 @@ function generatePoints() {
         const lat = baseLat + distDeg * Math.cos(angle);
         const lng = baseLng + distDeg * Math.sin(angle);
 
+        // создаем маркер
         const marker = L.circleMarker([lat, lng], {
             radius: 6,
             color: COLORS[i % COLORS.length],
@@ -25,13 +26,16 @@ function generatePoints() {
             adsViewed: 0
         };
 
+        // расчет мощности и рекламы
         point.power = calculatePower(distMeters);
         point.adsRequired = calculateAds(distMeters);
 
+        // 🔥 Лог для проверки
         console.log(`Точка ${i + 1}: дистанция = ${distMeters} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
 
         points.push(point);
 
+        // клик по точке
         marker.on('click', () => openPointModal(point));
     }
 }
