@@ -1,336 +1,236 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>KWT Mini App Prototype</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<style>
-html, body { margin:0; padding:0; height:100%; font-family: Arial, sans-serif; background:#12001f; color:#fff; touch-action: manipulation; }
-h1 { text-align:center; margin:10px 0; }
-#map { width:100%; height:60vh; display:none; border:2px solid gold; }
-.controls { text-align:center; margin:5px; }
-.btn { margin:5px; padding:10px 20px; background:#4CAF50; color:white; border:none; cursor:pointer; }
-#message { color:#6cff6c; font-weight:bold; text-align:center; margin-top:10px; }
-#joystick-container { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; justify-content:center; align-items:center; touch-action:none; z-index:10000; }
-#joystick { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.4); position:relative; touch-action:none; }
-#splash-img { position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; z-index:9999; }
-.watt-counter {
-    position: absolute;
-    color: gold;
-    font-weight: bold;
-    font-size: 14px;
-    text-shadow: 0 0 3px #000;
-    pointer-events: none;
-    transition: transform 0.1s linear;
-}
-</style>
-</head>
-<body>
-<h1>KWT Mini App Prototype</h1>
-<div class="controls">
-    <button id="watch-ad-btn" class="btn">Посмотреть рекламу</button>
-    <p>Мощность в кабинете: <span id="power-total">0</span> ват</p>
-    <p>💰 Кэш: <span id="cash-total">0</span></p> <!-- 💛 Тут показываем кэш -->
-    <p>🔋 Мои станции: <span id="stations-count">0</span></p> <!-- 💛 Тут показываем количество твоих станций -->
-</div>
-<p id="message"></p>
-<div id="map"></div>
-<div id="joystick-container"><div id="joystick"></div></div>
-<img id="splash-img" src="https://via.placeholder.com/500x500.png?text=KWT+Splash">
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-const baseLat = 47.0100, baseLng = 28.8638;
-let playerLat = baseLat, playerLng = baseLng, playerPower = 0, playerAds = 0;
-const STEP_DEGREE = (100 / 111320) / 1200;
-let moveX = 0, moveY = 0;
-let map, userMarker, points = [], activePoint = null, movingToPoint = false;
-let playerCash = 0; // 💛 Кэш игрока
-let myStationsCount = 0; // 💛 Количество твоих станций
+from flask import Flask, render_template, request, jsonify
+from math import radians, cos, sqrt, sin, atan2
+from threading import Thread
+from time import sleep, time
+import random, os, sqlite3
+import hmac, hashlib  # <-- добавил сюда для проверки Telegram WebApp
 
-// --- ID игрока ---
-let playerId;
-if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
-    playerId = window.Telegram.WebApp.initDataUnsafe.user.id;
-} else playerId = 123456;
+app = Flask(__name__)
+BOT_TOKEN = "8389490742:AAGXDGWxGCdREk4peI3I8fPU1cGMBpdaHvM"  # <-- вставьте сюда токен своего бота
 
-// Загрузка и сохранение мощности
-async function loadPlayerPower() {
-    try {
-        const resp = await fetch(`/player/${playerId}`);
-        if (resp.ok) {
-            const data = await resp.json();
-            playerPower = data.power || 0;
-            document.getElementById('power-total').textContent = playerPower.toFixed(1);
-        }
-    } catch(e){ console.error(e); }
-}
+# ======= ПУТЬ К БД =======
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'players.db')
 
-async function savePlayerPower() {
-    try {
-        await fetch(`/player/${playerId}`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json' },
-            body: JSON.stringify({ power: playerPower })
-        });
-    } catch(e){ console.error(e); }
-}
+# ====== ИНИЦИАЛИЗАЦИЯ БД ======
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
 
-// ===== Расчёт мощности точки =====
-function calculatePower(distMeters){
-    if(distMeters < 100) return 0; // до 100 м — мощность 0
-    const hundreds = Math.floor((distMeters - 1)/100); // 100-199 -> 1 сотня, 200-299 -> 2 сотни
-    return hundreds * 4; // 4 ват за каждую сотню после первой
-}
+    # игроки
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS players (
+            player_id TEXT PRIMARY KEY,
+            power REAL DEFAULT 0
+        )
+    ''')
 
-// ===== Рассчёт рекламы =====
-function calculateAds(distMeters){
-    return Math.floor(distMeters / 100) + 1; // 0-100 м -> 1 реклама, 101-200 -> 2, 201-300 -> 3
-}
+    # личные станции
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS stations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id TEXT,
+            lat REAL,
+            lng REAL,
+            power REAL DEFAULT 0,
+            last_collect INTEGER
+        )
+    ''')
 
-// ===== Splash + карта =====
-async function showSplashThenMap(){
-    const splash = document.getElementById('splash-img');
-    splash.style.display='block';
-    setTimeout(async ()=>{
-        splash.style.display='none';
-        const mapDiv = document.getElementById('map');
-        mapDiv.style.display='block';
-        await loadPlayerPower();
-        initMap();
-        map.setView([playerLat, playerLng], 15);
-    },3000);
-}
+    conn.commit()
+    conn.close()
 
-// ===== Инициализация карты =====
-function initMap(){
-    map = L.map('map').setView([playerLat, playerLng], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19 }).addTo(map);
-    userMarker = L.marker([playerLat,playerLng]).addTo(map).bindPopup("Вы здесь").openPopup();
+init_db()
 
-    generatePoints();
-    loadStations();
+# ====== PLAYER ======
+def get_power(player_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT power FROM players WHERE player_id = ?', (player_id,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else 0
 
-    map.invalidateSize(); // добавляем чтобы карта корректно отображалась
-} // <- вот закрыли функцию initMap
+def set_power(player_id, power):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        'INSERT INTO players(player_id, power) VALUES (?, ?) '
+        'ON CONFLICT(player_id) DO UPDATE SET power=excluded.power',
+        (player_id, power)
+    )
+    conn.commit()
+    conn.close()
 
+# ====== СТАНЦИИ ======
+GENERATION_PER_HOUR = 1000  # мВт в час
 
-// ===== Генерация точек =====
-function generatePoints() {
-    points=[];
-    const TOTAL_POINTS=50, COLORS=['#00ff99','#ffd700','#ff5555','#00aaff','#cc66ff'];
-    for(let i=0;i<TOTAL_POINTS;i++){
-        const distMeters=Math.random()*1000+50;
-        const distDeg=distMeters/111320;
-        const angle=Math.random()*Math.PI*2;
-        const lat=baseLat+distDeg*Math.cos(angle);
-        const lng=baseLng+distDeg*Math.sin(angle);
-        const marker=L.circleMarker([lat,lng],{radius:6,color:COLORS[i%COLORS.length],fillOpacity:0.9}).addTo(map);
-        const point={lat,lng,marker,collected:false,power:calculatePower(distMeters),adsRequired:1};
-        points.push(point);
-        marker.on('click', ()=> openPointModal(point));
-    }
+def create_station(player_id, lat, lng):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        'INSERT INTO stations(owner_id, lat, lng, power, last_collect) VALUES (?, ?, ?, 0, ?)',
+        (player_id, lat, lng, int(time()))
+    )
+    conn.commit()
+    conn.close()
+
+def get_stations():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT id, owner_id, lat, lng, power, last_collect FROM stations')
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def collect_station(station_id, player_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute('SELECT owner_id, power, last_collect FROM stations WHERE id=?', (station_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return None, "Станция не найдена"
+
+    owner_id, stored_power, last_collect = row
+    if owner_id != player_id:
+        conn.close()
+        return None, "Это не твоя станция"
+
+    now = int(time())
+    hours = (now - last_collect) / 3600
+    generated = hours * GENERATION_PER_HOUR
+    total = stored_power + generated
+
+    c.execute(
+        'UPDATE stations SET power=0, last_collect=? WHERE id=?',
+        (now, station_id)
+    )
+
+    current_player_power = get_power(player_id)
+    set_power(player_id, current_player_power + total)
+
+    conn.commit()
+    conn.close()
+    return total, None
+
+# ======= ОБЩАЯ ТОЧКА =======
+point = {
+    "lat": 47.0105,
+    "lng": 28.8638,
+    "radius": 300,
+    "counter": 1000.0
 }
 
-// ===== Станции с DivIcon счётчиком =====
-let stationMarkers={}, stationsData={};
+collect_threshold = 50
+ad_increment = 0.005
 
-function loadStations(){
-    fetch("/stations")
-    .then(r=>r.json())
-    .then(stations=>{
-        stations.forEach(s=>{
-            if(stationMarkers[s.id]) return;
-
-            stationsData[s.id] = { owner:s.owner, power:s.power, rate:s.rate||0.1, lastCollected:s.lastCollected||0, displayedPower:0 };
-
-            // Создаем DivIcon с пустым счетчиком
-            const iconHtml = `<div style="position:relative; text-align:center;">
-                <div id="counter-${s.id}" style="color:gold; font-weight:bold; font-size:14px; text-shadow:0 0 3px #000;">0.0</div>
-                <img src="https://cdn-icons-png.flaticon.com/512/428/428734.png" style="width:24px; height:24px; display:block; margin:0 auto;">
-            </div>`;
-
-            const icon = L.divIcon({
-                html: iconHtml,
-                className: '',  // без стандартного фона маркера
-                iconSize: [30, 40],
-                iconAnchor: [15, 40] // точка привязки к маркеру (ниже центра)
-            });
-
-            const marker = L.marker([s.lat, s.lng], { icon: icon }).addTo(map);
-
-            marker.bindPopup(`<b>Станция</b><br>Владелец: ${s.owner}<br>Энергия: ${s.power.toFixed(1)}<br>${s.owner==playerId?'<button onclick="collectStation('+s.id+')">Собрать</button>':'<i>Чужая станция</i>'}`);
-
-            stationMarkers[s.id] = marker;
-        });
-
-        // Запускаем обновление счетчиков
-        requestAnimationFrame(updateWattCounters);
-    });
+# ======= ДВИЖЕНИЕ ТОЧКИ =======
+city_bounds = {
+    "north": 47.0520,
+    "south": 46.9800,
+    "east": 28.9700,
+    "west": 28.8100
 }
 
-// ===== Плавное обновление ватт для DivIcon =====
-function updateWattCounters(){
-    for(const id in stationsData){
-        const st = stationsData[id];
-        st.displayedPower += (st.power - st.displayedPower) * 0.1;
-        const counter = document.getElementById(`counter-${id}`);
-        if(counter) counter.textContent = st.displayedPower.toFixed(1);
-    }
-    requestAnimationFrame(updateWattCounters);
-}
+target_point = {"lat": point["lat"], "lng": point["lng"]}
 
-// ===== Остальной код (станции, джойстик, точки, реклама) =====
-setInterval(()=>{
-    const now=Date.now();
-    for(const id in stationsData){
-        const st=stationsData[id];
-        st.power+=st.rate;
-        if(stationMarkers[id]){
-            stationMarkers[id].bindPopup(`<b>Станция</b><br>Владелец: ${st.owner}<br>Энергия: ${st.power.toFixed(1)}<br>${st.owner==playerId?'<button onclick="collectStation('+id+')">Собрать</button>':'<i>Чужая станция</i>'}`);
-        }
-    }
-},1000);
+def move_point_thread():
+    while True:
+        if abs(target_point["lat"] - point["lat"]) < 0.00005:
+            target_point["lat"] = random.uniform(city_bounds["south"], city_bounds["north"])
+        if abs(target_point["lng"] - point["lng"]) < 0.00005:
+            target_point["lng"] = random.uniform(city_bounds["west"], city_bounds["east"])
 
-function collectStation(id){
-    const st=stationsData[id];
-    const now=Date.now();
-    if(st.lastCollected && (now-st.lastCollected<24*3600*1000)){ alert("Собрать можно раз в сутки!"); return; }
-    fetch("/station/collect",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({station_id:id,player_id:playerId,power:st.power})
-    }).then(r=>r.json()).then(data=>{
-        alert("Собрано: "+st.power.toFixed(1));
-        st.power=0; st.lastCollected=now;
-        savePlayerPower();
-    });
-}
+        point["lat"] += (target_point["lat"] - point["lat"]) * 0.01
+        point["lng"] += (target_point["lng"] - point["lng"]) * 0.01
+        sleep(1)
 
-// ===== Джойстик =====
-const joystick=document.getElementById('joystick'), container=document.getElementById('joystick-container');
-let dragging=false;
-function updateVector(dx,dy){ const len=Math.hypot(dx,dy); if(len===0){moveX=0; moveY=0; return;} moveX=(dx/len)*STEP_DEGREE; moveY=(-dy/len)*STEP_DEGREE; }
-joystick.addEventListener('pointerdown',()=>dragging=true);
-document.addEventListener('pointerup',()=>{ dragging=false; joystick.style.transform='translate(0,0)'; updateVector(0,0); });
-document.addEventListener('pointermove',e=>{ if(!dragging) return; const r=container.getBoundingClientRect(); const cx=r.left+r.width/2, cy=r.top+r.height/2; let dx=e.clientX-cx, dy=e.clientY-cy; const max=r.width/2-40, dist=Math.min(Math.hypot(dx,dy),max), ang=Math.atan2(dy,dx); dx=dist*Math.cos(ang); dy=dist*Math.sin(ang); joystick.style.transform=`translate(${dx}px,${dy}px)`; updateVector(dx,dy); });
+Thread(target=move_point_thread, daemon=True).start()
 
-setInterval(()=>{
-    if(movingToPoint && activePoint){
-        const d=distance(playerLat,playerLng,activePoint.lat,activePoint.lng);
-        if(d<5){ activePoint.collected=true; playerPower+=activePoint.power; document.getElementById('power-total').textContent=playerPower.toFixed(1); savePlayerPower(); map.removeLayer(activePoint.marker); movingToPoint=false; activePoint=null; }
-        else{ const dx=activePoint.lng-playerLng, dy=activePoint.lat-playerLat, dist=Math.hypot(dx,dy), speed=0.02; playerLat+=(dy/dist)*STEP_DEGREE*1200*speed; playerLng+=(dx/dist)*STEP_DEGREE*1200*speed; userMarker.setLatLng([playerLat,playerLng]); map.setView([playerLat,playerLng], map.getZoom(),{animate:false}); }
-    }else{ playerLat+=moveY; playerLng+=moveX; userMarker.setLatLng([playerLat,playerLng]); map.setView([playerLat,playerLng], map.getZoom(),{animate:false}); }
-},50);
+def verify_telegram_data(data_dict):
+     """Проверяет подпись initData от Telegram"""
+     check_string = "\n".join([f"{k}={v}" for k, v in sorted(data_dict.items()) if k != "hash"])
+     secret_key = hashlib.sha256(BOT_TOKEN.encode()).digest()
+     hmac_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
+     if hmac_hash != data_dict.get("hash"):
+         return False
+     auth_date = int(data_dict.get("auth_date", 0))
+     if time.time() - auth_date > 86400:
+         return False
+     return True
 
-document.getElementById('watch-ad-btn').onclick=()=>{
-    playerAds++;
-    for(const p of points){
-        if(p.collected) continue;
-        const d=distance(playerLat,playerLng,p.lat,p.lng);
-        if(d<15 && playerAds>=p.adsRequired){ p.collected=true; playerPower+=p.power; document.getElementById('power-total').textContent=playerPower.toFixed(1); savePlayerPower(); map.removeLayer(p.marker); }
-    }
-};
+# ======= ROUTES =======
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-function distance(lat1,lon1,lat2,lon2){ const R=6371000; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+ # ======= ИЗМЕНЁННЫЙ ROUTE /player ДЛЯ КАБИНЕТА ИГРОКА =======
+@app.route('/player', methods=['POST'])
+def player_power_route():
+    """
+    Каждый игрок заходя через Telegram WebApp получает свои данные
+    """
+    data = request.json
+    initData = data.get("initData")
+    if not initData:
+        return jsonify({"error": "Нет данных Telegram"}), 400
 
-function openPointModal(point){
-    activePoint = point;
-    point.adsViewed = 0; // сброс просмотров для этой точки
+    try:
+        init_dict = dict(x.split("=",1) for x in initData.split("&"))
+    except Exception:
+        return jsonify({"error": "Неверный формат initData"}), 400
 
-    const modal = document.getElementById('point-modal');
-    modal.style.display = 'flex';
+    if not verify_telegram_data(init_dict):
+        return jsonify({"error": "Неверная подпись"}), 403
 
-    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+    player_id = init_dict.get("id")
+    if not player_id:
+        return jsonify({"error": "Нет id пользователя"}), 400
 
-    // Динамическая мощность точки (например 310 м -> 12 ват)
-    let power = 0;
-    if(dist >= 100) power = Math.floor((dist - 100)/100 + 1) * 4;
+    if get_power(player_id) is None:
+        set_power(player_id, 0)
 
-    const adsRequired = Math.max(1, Math.ceil(dist / 100));
+    power = get_power(player_id)
+    my_stations = [s for s in get_stations() if s[1]==player_id]
 
-    point.power = power;
-    point.adsRequired = adsRequired;
+    return jsonify({
+        "player_id": player_id,
+        "power": power,
+        "stations": my_stations
+    })
+# --- станции ---
+@app.route('/stations')
+def stations():
+    stations = []
+    for s in get_stations():
+        stations.append({
+            "id": s[0],
+            "owner": s[1],
+            "lat": s[2],
+            "lng": s[3],
+            "power": round(s[4], 2)
+        })
+    return jsonify(stations)
 
-    document.getElementById('pm-info').innerHTML =
-        `Расстояние: ${dist.toFixed(1)} м<br>
-         Нужно рекламы: ${point.adsRequired}<br>
-         Мощность: ${point.power.toFixed(1)} ват`;
-    document.getElementById('ads-count').textContent = point.adsViewed;
+@app.route('/station/create', methods=['POST'])
+def create_station_route():
+    data = request.json
+    create_station(data['player_id'], data['lat'], data['lng'])
+    return jsonify({"status": "created"})
 
-    const adBtn = document.getElementById('pm-ad-btn');
-    adBtn.onclick = ()=>{
-        point.adsViewed++;
-        document.getElementById('ads-count').textContent = point.adsViewed;
+@app.route('/station/collect', methods=['POST'])
+def collect_station_route():
+    data = request.json
+    amount, error = collect_station(data['station_id'], data['player_id'])
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({"collected": round(amount, 2)})
 
-        // Проверяем, достигнут ли лимит рекламы
-        if(point.adsViewed >= point.adsRequired){
-            // Закрываем модальное окно
-            modal.style.display = 'none';
-            activePoint = null;
+@app.route("/get_point")
+def get_point():
+    return jsonify(point)
 
-            // Запускаем движение к точке и сбор
-            movePlayerToPoint(point, ()=>collectPoint(point, "через просмотр рекламы"));
-        }
-    };
-}
-
-// Двигаем игрока к точке
-function movePlayerToPoint(point, callback){
-    const speed = 0.00005; // скорость движения
-    const moveInterval = setInterval(()=>{
-        const dx = point.lng - playerLng;
-        const dy = point.lat - playerLat;
-        const dist = Math.hypot(dx, dy);
-
-        if(dist < 0.00005){ // дошли до точки
-            clearInterval(moveInterval);
-            if(callback) callback();
-            return;
-        }
-
-        playerLat += dy * speed / dist;
-        playerLng += dx * speed / dist;
-        userMarker.setLatLng([playerLat, playerLng]);
-        map.setView([playerLat, playerLng], map.getZoom(), {animate:false});
-    }, 50);
-}
-
-// Сбор точки
-function collectPoint(point, reason=""){
-    if(point.collected) return;
-    point.collected = true;
-
-    playerPower += point.power;
-    document.getElementById('power-total').textContent = playerPower.toFixed(1);
-    savePlayerPower();
-
-    if(point.marker) map.removeLayer(point.marker);
-
-    alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
-}
-
-// Закрытие модального окна вручную (ничего не собираем)
-function closePointModal(){
-    document.getElementById('point-modal').style.display = 'none';
-    activePoint = null;
-}
-
-
-
-
-showSplashThenMap();
-</script>
-
-<div id="point-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:20000;">
-  <div style="background:#1b002b; padding:20px; border-radius:12px; width:90%; max-width:320px; text-align:center; border:2px solid gold;">
-    <h3>📍 Энергетическая точка</h3>
-    <p id="pm-info">Информация о точке</p>
-    <p>Просмотрено рекламы: <span id="ads-count">0</span></p>
-    <button class="btn" id="pm-ad-btn">Смотреть рекламу</button>
-    <button class="btn" onclick="closePointModal()">Закрыть</button>
-  </div>
-</div>
-
-</body>
-</html>
+if __name__ == "__main__":
+    app.run(debug=True)
