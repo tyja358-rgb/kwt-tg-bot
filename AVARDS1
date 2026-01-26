@@ -1,55 +1,17 @@
-#splash-img {
-    position:fixed;
-    inset:0;
-    width:100vw;
-    height:100vh;
-    object-fit:cover;
-    z-index:9999;
-    pointer-events: none; /* 🔥 ВАЖНО */
-}
-
-
-
+let mapReady = false;
 
 function initMap() {
-
-    // ❗ если карта уже создана — НЕ создаём заново
     if (map) return;
+    map = L.map('map', { zoomControl: true }).setView([playerLat, playerLng], 15);
+    userMarker = L.marker([playerLat, playerLng]).addTo(map).bindPopup("Вы здесь");
 
-    map = L.map('map', {
-        zoomControl: true,
-        attributionControl: true
-    }).setView([playerLat, playerLng], 15);
-
-    L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            maxZoom: 19,
-            crossOrigin: true
-        }
-    ).addTo(map);
-
-    userMarker = L.marker([playerLat, playerLng])
-        .addTo(map)
-        .bindPopup("Вы здесь");
-
+    mapReady = true;
     generatePoints();
     loadStations();
-
-    setTimeout(() => {
-        map.invalidateSize(true);
-    }, 300);
 }
 
-
-
-
-
-requestAnimationFrame(() => {
-    initMap();
-});
-
-
-
-
-
+// и в интервал движения
+setInterval(()=>{
+    if(!mapReady) return; // ждём, пока карта и маркер созданы
+    ...
+},50);
