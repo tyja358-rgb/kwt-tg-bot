@@ -1,9 +1,37 @@
-document.getElementById('watch-ad-btn').onclick = () => {
-    if(!activePoint) return; // если точка не открыта, ничего не делаем
-    activePoint.adsViewed++;
-    document.getElementById('ads-count').textContent = activePoint.adsViewed;
-    if(activePoint.adsViewed >= activePoint.adsRequired){
-        collectPoint(activePoint, "через просмотр рекламы");
-        closePointModal();
+function generatePoints() {
+    points = [];
+    const TOTAL_POINTS = 50;
+    const COLORS = ['#00ff99', '#ffd700', '#ff5555', '#00aaff', '#cc66ff'];
+
+    for (let i = 0; i < TOTAL_POINTS; i++) {
+        // шаг 100 метров, начиная с 100
+        const distMeters = 100 * ((i % 10) + 1); // 100,200,...1000, потом повторяем
+        const distDeg = distMeters / 111320;
+        const angle = Math.random() * Math.PI * 2; // случайный угол
+        const lat = baseLat + distDeg * Math.cos(angle);
+        const lng = baseLng + distDeg * Math.sin(angle);
+
+        const marker = L.circleMarker([lat, lng], {
+            radius: 6,
+            color: COLORS[i % COLORS.length],
+            fillOpacity: 0.9
+        }).addTo(map);
+
+        const point = {
+            lat,
+            lng,
+            marker,
+            collected: false,
+            adsViewed: 0
+        };
+
+        point.power = calculatePower(distMeters);
+        point.adsRequired = calculateAds(distMeters);
+
+        console.log(`Точка ${i + 1}: дистанция = ${distMeters} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
+
+        points.push(point);
+
+        marker.on('click', () => openPointModal(point));
     }
-};
+}
