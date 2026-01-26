@@ -1,236 +1,28 @@
-from flask import Flask, render_template, request, jsonify
-from math import radians, cos, sqrt, sin, atan2
-from threading import Thread
-from time import sleep, time
-import random, os, sqlite3
-import hmac, hashlib  # <-- добавил сюда для проверки Telegram WebApp
+// --- ID игрока ---
+let playerId = null;
 
-app = Flask(__name__)
-BOT_TOKEN = "8389490742:AAGXDGWxGCdREk4peI3I8fPU1cGMBpdaHvM"  # <-- вставьте сюда токен своего бота
-
-# ======= ПУТЬ К БД =======
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'players.db')
-
-# ====== ИНИЦИАЛИЗАЦИЯ БД ======
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-
-    # игроки
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS players (
-            player_id TEXT PRIMARY KEY,
-            power REAL DEFAULT 0
-        )
-    ''')
-
-    # личные станции
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS stations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            owner_id TEXT,
-            lat REAL,
-            lng REAL,
-            power REAL DEFAULT 0,
-            last_collect INTEGER
-        )
-    ''')
-
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# ====== PLAYER ======
-def get_power(player_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT power FROM players WHERE player_id = ?', (player_id,))
-    row = c.fetchone()
-    conn.close()
-    return row[0] if row else 0
-
-def set_power(player_id, power):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        'INSERT INTO players(player_id, power) VALUES (?, ?) '
-        'ON CONFLICT(player_id) DO UPDATE SET power=excluded.power',
-        (player_id, power)
-    )
-    conn.commit()
-    conn.close()
-
-# ====== СТАНЦИИ ======
-GENERATION_PER_HOUR = 1000  # мВт в час
-
-def create_station(player_id, lat, lng):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        'INSERT INTO stations(owner_id, lat, lng, power, last_collect) VALUES (?, ?, ?, 0, ?)',
-        (player_id, lat, lng, int(time()))
-    )
-    conn.commit()
-    conn.close()
-
-def get_stations():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT id, owner_id, lat, lng, power, last_collect FROM stations')
-    rows = c.fetchall()
-    conn.close()
-    return rows
-
-def collect_station(station_id, player_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-
-    c.execute('SELECT owner_id, power, last_collect FROM stations WHERE id=?', (station_id,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        return None, "Станция не найдена"
-
-    owner_id, stored_power, last_collect = row
-    if owner_id != player_id:
-        conn.close()
-        return None, "Это не твоя станция"
-
-    now = int(time())
-    hours = (now - last_collect) / 3600
-    generated = hours * GENERATION_PER_HOUR
-    total = stored_power + generated
-
-    c.execute(
-        'UPDATE stations SET power=0, last_collect=? WHERE id=?',
-        (now, station_id)
-    )
-
-    current_player_power = get_power(player_id)
-    set_power(player_id, current_player_power + total)
-
-    conn.commit()
-    conn.close()
-    return total, None
-
-# ======= ОБЩАЯ ТОЧКА =======
-point = {
-    "lat": 47.0105,
-    "lng": 28.8638,
-    "radius": 300,
-    "counter": 1000.0
+// Функция, которая ждёт инициализацию Telegram WebApp
+function waitForTelegramInit(retries = 20) {
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            playerId = tg.initDataUnsafe.user.id;
+            console.log("Telegram ID:", playerId);
+            initApp(); // старт игры
+        } else {
+            alert("Ошибка: нет данных пользователя Telegram");
+        }
+    } else if (retries > 0) {
+        // Ждём 200 мс и пробуем снова
+        setTimeout(() => waitForTelegramInit(retries - 1), 200);
+    } else {
+        alert("Ошибка: откройте через Telegram WebApp");
+    }
 }
 
-collect_threshold = 50
-ad_increment = 0.005
+// Запускаем проверку
+waitForTelegramInit();
 
-# ======= ДВИЖЕНИЕ ТОЧКИ =======
-city_bounds = {
-    "north": 47.0520,
-    "south": 46.9800,
-    "east": 28.9700,
-    "west": 28.8100
+function initApp() {
+    showSplashThenMap();
 }
-
-target_point = {"lat": point["lat"], "lng": point["lng"]}
-
-def move_point_thread():
-    while True:
-        if abs(target_point["lat"] - point["lat"]) < 0.00005:
-            target_point["lat"] = random.uniform(city_bounds["south"], city_bounds["north"])
-        if abs(target_point["lng"] - point["lng"]) < 0.00005:
-            target_point["lng"] = random.uniform(city_bounds["west"], city_bounds["east"])
-
-        point["lat"] += (target_point["lat"] - point["lat"]) * 0.01
-        point["lng"] += (target_point["lng"] - point["lng"]) * 0.01
-        sleep(1)
-
-Thread(target=move_point_thread, daemon=True).start()
-
-def verify_telegram_data(data_dict):
-     """Проверяет подпись initData от Telegram"""
-     check_string = "\n".join([f"{k}={v}" for k, v in sorted(data_dict.items()) if k != "hash"])
-     secret_key = hashlib.sha256(BOT_TOKEN.encode()).digest()
-     hmac_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-     if hmac_hash != data_dict.get("hash"):
-         return False
-     auth_date = int(data_dict.get("auth_date", 0))
-     if time.time() - auth_date > 86400:
-         return False
-     return True
-
-# ======= ROUTES =======
-@app.route("/")
-def index():
-    return render_template("index.html")
-
- # ======= ИЗМЕНЁННЫЙ ROUTE /player ДЛЯ КАБИНЕТА ИГРОКА =======
-@app.route('/player', methods=['POST'])
-def player_power_route():
-    """
-    Каждый игрок заходя через Telegram WebApp получает свои данные
-    """
-    data = request.json
-    initData = data.get("initData")
-    if not initData:
-        return jsonify({"error": "Нет данных Telegram"}), 400
-
-    try:
-        init_dict = dict(x.split("=",1) for x in initData.split("&"))
-    except Exception:
-        return jsonify({"error": "Неверный формат initData"}), 400
-
-    if not verify_telegram_data(init_dict):
-        return jsonify({"error": "Неверная подпись"}), 403
-
-    player_id = init_dict.get("id")
-    if not player_id:
-        return jsonify({"error": "Нет id пользователя"}), 400
-
-    if get_power(player_id) is None:
-        set_power(player_id, 0)
-
-    power = get_power(player_id)
-    my_stations = [s for s in get_stations() if s[1]==player_id]
-
-    return jsonify({
-        "player_id": player_id,
-        "power": power,
-        "stations": my_stations
-    })
-# --- станции ---
-@app.route('/stations')
-def stations():
-    stations = []
-    for s in get_stations():
-        stations.append({
-            "id": s[0],
-            "owner": s[1],
-            "lat": s[2],
-            "lng": s[3],
-            "power": round(s[4], 2)
-        })
-    return jsonify(stations)
-
-@app.route('/station/create', methods=['POST'])
-def create_station_route():
-    data = request.json
-    create_station(data['player_id'], data['lat'], data['lng'])
-    return jsonify({"status": "created"})
-
-@app.route('/station/collect', methods=['POST'])
-def collect_station_route():
-    data = request.json
-    amount, error = collect_station(data['station_id'], data['player_id'])
-    if error:
-        return jsonify({"error": error}), 400
-    return jsonify({"collected": round(amount, 2)})
-
-@app.route("/get_point")
-def get_point():
-    return jsonify(point)
-
-if __name__ == "__main__":
-    app.run(debug=True)
