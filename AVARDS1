@@ -1,29 +1,55 @@
-let map;
-let userMarker;
+#splash-img {
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    object-fit:cover;
+    z-index:9999;
+    pointer-events: none; /* 🔥 ВАЖНО */
+}
+
+
+
 
 function initMap() {
 
-    // 1️⃣ СОЗДАЁМ КАРТУ
-    map = L.map('map').setView([playerLat, playerLng], 15);
+    // ❗ если карта уже создана — НЕ создаём заново
+    if (map) return;
 
-    // 2️⃣ СЛОЙ КАРТЫ
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+    map = L.map('map', {
+        zoomControl: true,
+        attributionControl: true
+    }).setView([playerLat, playerLng], 15);
 
-    // 3️⃣ МАРКЕР ИГРОКА
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            maxZoom: 19,
+            crossOrigin: true
+        }
+    ).addTo(map);
+
     userMarker = L.marker([playerLat, playerLng])
         .addTo(map)
         .bindPopup("Вы здесь");
 
-    // 4️⃣ ДОПОЛНИТЕЛЬНАЯ ЛОГИКА
     generatePoints();
     loadStations();
 
-    // 5️⃣ ОБНОВЛЕНИЕ РАЗМЕРОВ
     setTimeout(() => {
-        map.invalidateSize();
-    }, 200);
+        map.invalidateSize(true);
+    }, 300);
 }
+
+
+
+
+
+requestAnimationFrame(() => {
+    initMap();
+});
+
+
+
+
+
