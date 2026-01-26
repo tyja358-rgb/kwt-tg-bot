@@ -5,20 +5,21 @@ function generatePoints() {
     const COLORS = ['#00ff99', '#ffd700', '#ff5555', '#00aaff', '#cc66ff'];
 
     for (let i = 0; i < TOTAL_POINTS; i++) {
-        // расстояние до точки от 100 до 3500 метров
+        // расстояние до точки: от 100 до 3500 метров
         const distMeters = 100 + Math.random() * 3400; // 100..3500
-        const distDeg = distMeters / 111320; // преобразуем в градусы
+        const distDeg = distMeters / 111320; // перевод в градусы
         const angle = Math.random() * Math.PI * 2; // случайный угол
         const lat = baseLat + distDeg * Math.cos(angle);
         const lng = baseLng + distDeg * Math.sin(angle);
 
-        // создаем маркер
+        // создаём маркер
         const marker = L.circleMarker([lat, lng], {
             radius: 6,
             color: COLORS[i % COLORS.length],
             fillOpacity: 0.9
         }).addTo(map);
 
+        // объект точки
         const point = {
             lat,
             lng,
@@ -27,12 +28,14 @@ function generatePoints() {
             adsViewed: 0
         };
 
-        // расчет мощности и рекламы
+        // расчёт мощности
         point.power = calculatePower(distMeters);
-        point.adsRequired = calculateAds(lat, lng); // теперь по реальному расстоянию
 
-        // 🔥 Лог для проверки
-        console.log(`Точка ${i + 1}: дистанция = ${distMeters.toFixed(1)} м, рекламы = ${point.adsRequired}, мощность = ${point.power.toFixed(1)}`);
+        // расчёт количества рекламы (100м = 1 реклама, округляем вверх)
+        point.adsRequired = Math.ceil(distMeters / 100);
+
+        // 🔥 лог для проверки
+        console.log(`Точка ${i + 1}: дистанция = ${distMeters.toFixed(1)} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
 
         points.push(point);
 
@@ -41,8 +44,9 @@ function generatePoints() {
     }
 }
 
-// ===== Расчет рекламы =====
-function calculateAds(pointLat, pointLng) {
-    const dist = distance(playerLat, playerLng, pointLat, pointLng);
-    return Math.ceil(dist / 100); // 100 м = 1 реклама, 101-200 м = 2 рекламы и т.д.
+// ===== Расчёт мощности =====
+function calculatePower(distMeters) {
+    if (distMeters < 100) return 0;
+    const hundreds = Math.floor((distMeters - 1) / 100);
+    return hundreds * 4; // например, каждые 100м = 4 ватта
 }
