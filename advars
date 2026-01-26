@@ -1,25 +1,22 @@
-// ===== Генерация точек =====
 function generatePoints() {
     points = [];
     const TOTAL_POINTS = 50;
     const COLORS = ['#00ff99', '#ffd700', '#ff5555', '#00aaff', '#cc66ff'];
 
     for (let i = 0; i < TOTAL_POINTS; i++) {
-        // расстояние до точки: от 100 до 3500 метров
-        const distMeters = 100 + Math.random() * 3400; // 100..3500
-        const distDeg = distMeters / 111320; // перевод в градусы
-        const angle = Math.random() * Math.PI * 2; // случайный угол
+        // случайная точка вокруг baseLat/baseLng
+        const distMeters = 100 + Math.random() * 3400; // для мощности
+        const distDeg = distMeters / 111320;
+        const angle = Math.random() * Math.PI * 2;
         const lat = baseLat + distDeg * Math.cos(angle);
         const lng = baseLng + distDeg * Math.sin(angle);
 
-        // создаём маркер
         const marker = L.circleMarker([lat, lng], {
             radius: 6,
             color: COLORS[i % COLORS.length],
             fillOpacity: 0.9
         }).addTo(map);
 
-        // объект точки
         const point = {
             lat,
             lng,
@@ -28,25 +25,17 @@ function generatePoints() {
             adsViewed: 0
         };
 
-        // расчёт мощности
+        // мощность зависит от случайного расстояния (можно оставить как есть)
         point.power = calculatePower(distMeters);
 
-        // расчёт количества рекламы (100м = 1 реклама, округляем вверх)
-        point.adsRequired = Math.ceil(distMeters / 100);
+        // реклама зависит **от реального расстояния до игрока**
+        const realDist = distance(playerLat, playerLng, lat, lng); // в метрах
+        point.adsRequired = Math.ceil(realDist / 100); // 100м = 1 реклама, 101-200м = 2
 
-        // 🔥 лог для проверки
-        console.log(`Точка ${i + 1}: дистанция = ${distMeters.toFixed(1)} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
+        console.log(`Точка ${i + 1}: дистанция = ${realDist.toFixed(1)} м, рекламы = ${point.adsRequired}, мощность = ${point.power}`);
 
         points.push(point);
 
-        // клик по точке
         marker.on('click', () => openPointModal(point));
     }
-}
-
-// ===== Расчёт мощности =====
-function calculatePower(distMeters) {
-    if (distMeters < 100) return 0;
-    const hundreds = Math.floor((distMeters - 1) / 100);
-    return hundreds * 4; // например, каждые 100м = 4 ватта
 }
