@@ -1,18 +1,22 @@
-<button class="btn" onclick="closePointModal()">Закрыть</button>
-  </div>
-</div>
-<script src="/static/js/main.js"></script>
+<!-- Визуальный интерфейс рекламы -->
 <div id="ad-overlay" style="
-display:none;
-position:fixed;
-inset:0;
-background:#000;
-color:#0f0;
-z-index:9999;
-font-size:24px;
-align-items:center;
-justify-content:center;">
-📺 Просмотр рекламы…
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#0f0;
+    z-index:9999;
+    font-size:24px;
+    align-items:center;
+    justify-content:center;
+">
+    📺 Просмотр рекламы…
 </div>
+
+<!-- Кнопка для просмотра рекламы и счётчик -->
+<button id="watch-ad-btn">Смотреть рекламу</button>
+<span id="ads-count">0</span>
+
+<script src="/static/js/main.js"></script>
 </body>
 </html>
