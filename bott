@@ -1,47 +1,16 @@
-// ===== AdManager (единая система рекламы) =====
-const AdManager = {
-    provider: "mock", // mock | adsonar
+adBtn.onclick = async () => {
+    if (!activePoint) return;
 
-    async show() {
-        if (this.provider === "mock") {
-            return this.mockAd();
-        }
+    const watched = await AdManager.show();
+    if (!watched) return;
 
-        if (this.provider === "adsonar") {
-            return this.adSonarAd();
-        }
+    activePoint.adsViewed++;
+    document.getElementById('ads-count').textContent = activePoint.adsViewed;
 
-        return false;
-    },
-
-    // ===== Заглушка =====
-    mockAd() {
-        return new Promise(resolve => {
-            console.log("▶ Реклама началась (mock)");
-            showAdOverlay(true);
-
-            setTimeout(() => {
-                showAdOverlay(false);
-                console.log("✔ Реклама досмотрена (mock)");
-                resolve(true);
-            }, 3000);
-        });
-    },
-
-    // ===== AdSonar SDK (готово к подключению) =====
-    adSonarAd() {
-        return new Promise(resolve => {
-            if (!window.AdSonar) {
-                console.warn("AdSonar SDK не загружен");
-                resolve(false);
-                return;
-            }
-
-            window.AdSonar.showRewarded({
-                onComplete: () => resolve(true),
-                onSkip: () => resolve(false),
-                onError: () => resolve(false)
-            });
-        });
+    if (activePoint.adsViewed >= activePoint.adsRequired) {
+        closePointModal();
+        movePlayerToPoint(activePoint, () =>
+            collectPoint(activePoint, "через рекламу")
+        );
     }
 };
