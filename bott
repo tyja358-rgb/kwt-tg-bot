@@ -1,13 +1,47 @@
-adBtn.onclick = async ()=>{
-    const watched = await showAd();
-    if(!watched) return;
+// ===== AdManager (единая система рекламы) =====
+const AdManager = {
+    provider: "mock", // mock | adsonar
 
-    point.adsViewed++;
-    document.getElementById('ads-count').textContent = point.adsViewed;
+    async show() {
+        if (this.provider === "mock") {
+            return this.mockAd();
+        }
 
-    if(point.adsViewed >= point.adsRequired){
-        modal.style.display='none';
-        activePoint = null;
-        movePlayerToPoint(point, ()=>collectPoint(point,"через рекламу"));
+        if (this.provider === "adsonar") {
+            return this.adSonarAd();
+        }
+
+        return false;
+    },
+
+    // ===== Заглушка =====
+    mockAd() {
+        return new Promise(resolve => {
+            console.log("▶ Реклама началась (mock)");
+            showAdOverlay(true);
+
+            setTimeout(() => {
+                showAdOverlay(false);
+                console.log("✔ Реклама досмотрена (mock)");
+                resolve(true);
+            }, 3000);
+        });
+    },
+
+    // ===== AdSonar SDK (готово к подключению) =====
+    adSonarAd() {
+        return new Promise(resolve => {
+            if (!window.AdSonar) {
+                console.warn("AdSonar SDK не загружен");
+                resolve(false);
+                return;
+            }
+
+            window.AdSonar.showRewarded({
+                onComplete: () => resolve(true),
+                onSkip: () => resolve(false),
+                onError: () => resolve(false)
+            });
+        });
     }
 };
