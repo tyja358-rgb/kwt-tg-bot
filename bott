@@ -1,22 +1,43 @@
-<!-- Визуальный интерфейс рекламы -->
-<div id="ad-overlay" style="
-    display:none;
-    position:fixed;
-    inset:0;
-    background:#000;
-    color:#0f0;
-    z-index:9999;
-    font-size:24px;
-    align-items:center;
-    justify-content:center;
-">
-    📺 Просмотр рекламы…
-</div>
+// ===== Модальное окно точки =====
+function openPointModal(point){
+    activePoint = point;
+    point.adsViewed = 0; // сброс счетчика просмотров рекламы
+    const modal = document.getElementById('point-modal');
+    modal.style.display = 'flex';
 
-<!-- Кнопка для просмотра рекламы и счётчик -->
-<button id="watch-ad-btn">Смотреть рекламу</button>
-<span id="ads-count">0</span>
+    const dist = distance(playerLat, playerLng, point.lat, point.lng);
+    document.getElementById('pm-info').innerHTML = `
+        Расстояние: ${dist.toFixed(1)} м<br>
+        Нужно рекламы: ${point.adsRequired}<br>
+        Мощность: ${point.power.toFixed(1)}
+    `;
+    document.getElementById('ads-count').textContent = point.adsViewed;
+}
 
-<script src="/static/js/main.js"></script>
-</body>
-</html>
+// ===== Кнопка просмотра рекламы в модальном окне =====
+// Привязываем один раз, внизу main.js
+document.getElementById('pm-ad-btn').onclick = async () => {
+    if (!activePoint) return;
+
+    // Запускаем единый AdManager
+    const watched = await AdManager.show();
+    if (!watched) return;
+
+    // Увеличиваем счетчик просмотров рекламы
+    activePoint.adsViewed++;
+    document.getElementById('ads-count').textContent = activePoint.adsViewed;
+
+    // Если просмотров достаточно — собираем точку
+    if (activePoint.adsViewed >= activePoint.adsRequired) {
+        closePointModal();
+        movePlayerToPoint(activePoint, () =>
+            collectPoint(activePoint, "через рекламу")
+        );
+    }
+};
+
+// ===== Кнопка "Закрыть" модалки =====
+document.querySelector('#point-modal .btn[onclick^="closePointModal"]').onclick = closePointModal;
+
+// ===== Установка провайдера рекламы (пока mock) =====
+AdManager.provider = "mock";
