@@ -1,1 +1,3 @@
 curl -s -X POST http://127.0.0.1:5002/player/999999 -H "Content-Type: application/json" -d '{"power":0}' | jq
+6:35 ~/KWT_project $ curl -s -X POST http://127.0.0.1:5002/player/999999 -H "Content-Type: application/json" -d '{"power":0}' | jq
+16:36 ~/KWT_project 
