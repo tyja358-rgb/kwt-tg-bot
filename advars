@@ -1,4 +1,3 @@
-последний рабочий
 const baseLat = 47.0100, baseLng = 28.8638;
 let playerLat = baseLat, playerLng = baseLng, playerPower = 0, playerAds = 0;
 const STEP_DEGREE = (100 / 111320) / 1200;
@@ -232,17 +231,35 @@ function openPointModal(point){
     document.getElementById('ads-count').textContent = point.adsViewed;
 }
 
-// ===== Кнопка рекламы =====
-document.getElementById('watch-ad-btn').onclick = async () => {
-    if(!activePoint) return;
-    const watched = await AdManager.show();
-    if(!watched) return;
+// ===== Кнопка рекламы в модальном окне =====
+document.getElementById('pm-ad-btn').onclick = async () => {
+    if (!activePoint) return; // если нет активной точки — выходим
 
+    // показать оверлей рекламы
+    showAdOverlay(true);
+
+    // показываем рекламу через AdManager
+    const watched = await AdManager.show();
+
+    // скрыть оверлей
+    showAdOverlay(false);
+
+    if (!watched) return;
+
+    // увеличиваем счетчик рекламы для точки
     activePoint.adsViewed++;
+
+    // обновляем отображение в модальном окне
     document.getElementById('ads-count').textContent = activePoint.adsViewed;
 
-    if(activePoint.adsViewed >= activePoint.adsRequired){
-        movingToPoint = true; // маркер пойдет к точке
+    // если досмотрели всю рекламу — начинаем движение к точке
+    if (activePoint.adsViewed >= activePoint.adsRequired) {
+        // включаем движение к точке
+        movingToPoint = true;
+
+        // закрываем модалку, но НЕ обнуляем activePoint
+        document.getElementById('point-modal').style.display = 'none';
+        // активная точка остается глобальной, чтобы интервал движения сработал
     }
 };
 
