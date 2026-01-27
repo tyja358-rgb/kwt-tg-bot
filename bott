@@ -1,306 +1,78 @@
-const baseLat = 47.0100, baseLng = 28.8638;
-let playerLat = baseLat, playerLng = baseLng, playerPower = 0, playerAds = 0;
-const STEP_DEGREE = (100 / 111320) / 1200;
-let moveX = 0, moveY = 0;
-let map = null;
-let userMarker = null;
-let points = [];
-let activePoint = null;
-let movingToPoint = false;
-let playerCash = 0;
-let myStationsCount = 0;
-
-// --- ID игрока ---
-let playerId = null;
-let mapReady = false;
-
-// ===== initApp =====
-function initApp() {
-    console.log("initApp запущен");
-    showSplashThenMap();
+<!DOCTYPE html>  <html lang="ru">  
+<head>  
+<meta charset="UTF-8">  
+<title>KWT Mini App Prototype</title>  
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />  
+<style>  
+html, body { margin:0; padding:0; height:100%; font-family: Arial, sans-serif; background:#12001f; color:#fff; touch-action: manipulation; }  
+h1 { text-align:center; margin:10px 0; }  
+#map { width:100%; height:60vh; display:block; border:2px solid gold; }  
+.controls { text-align:center; margin:5px; }  
+.btn { margin:5px; padding:10px 20px; background:#4CAF50; color:white; border:none; cursor:pointer; }  
+#message { color:#6cff6c; font-weight:bold; text-align:center; margin-top:10px; }  
+#joystick-container { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; justify-content:center; align-items:center; touch-action:none; z-index:10000; }  
+#joystick { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.4); position:relative; touch-action:none; }  
+#splash-img {  
+    position:fixed;  
+    inset:0;  
+    width:100vw;  
+    height:100vh;  
+    object-fit:cover;  
+    z-index:9999;  
+    pointer-events: none; /* 🔥 ВАЖНО */  
+}  .watt-counter {
+position: absolute;
+color: gold;
+font-weight: bold;
+font-size: 14px;
+text-shadow: 0 0 3px #000;
+pointer-events: none;
+transition: transform 0.1s linear;
 }
+</style>
 
-function initAppSafe() {
-    try { initApp(); }
-    catch(e){ console.error("Ошибка инициализации:", e); }
-}
-
-// ===== Запуск приложения =====
-if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        playerId = tg.initDataUnsafe.user.id;
-        console.log("Telegram ID:", playerId);
-        initAppSafe();
-    } else {
-        console.warn("Telegram есть, но данные пользователя не получены");
-        initAppSafe();
-    }
-} else {
-    console.warn("Не в Telegram WebApp");
-    initAppSafe();
-}
-
-// ===== Splash + карта =====
-async function showSplashThenMap(){
-    const splash = document.getElementById('splash-img');
-    splash.style.display='block';
-    setTimeout(async ()=>{
-        splash.style.display='none';
-        document.getElementById('map').style.display='block';
-        initMap();
-        await loadPlayerPower();
-    },3000);
-}
-
-// ===== initMap =====
-function initMap() {
-    if (map) return;
-    map = L.map('map', { zoomControl:true, attributionControl:true }).setView([playerLat, playerLng], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, crossOrigin:true }).addTo(map);
-
-    userMarker = L.marker([playerLat, playerLng]).addTo(map).bindPopup("Вы здесь");
-
-    generatePoints();
-    loadStations();
-
-    setTimeout(() => { map.invalidateSize(true); mapReady = true; }, 300);
-}
-
-// ===== Генерация точек =====
-function generatePoints() {
-    points = [];
-    const TOTAL_POINTS = 50;
-    const COLORS = ['#00ff99','#ffd700','#ff5555','#00aaff','#cc66ff'];
-
-    for (let i = 0; i < TOTAL_POINTS; i++) {
-        const distMeters = 100 + Math.random()*3400;
-        const distDeg = distMeters / 111320;
-        const angle = Math.random()*Math.PI*2;
-        const lat = baseLat + distDeg*Math.cos(angle);
-        const lng = baseLng + distDeg*Math.sin(angle);
-
-        const marker = L.circleMarker([lat,lng], { radius:6, color:COLORS[i%COLORS.length], fillOpacity:0.9 }).addTo(map);
-
-        const point = { lat, lng, marker, collected:false, adsViewed:0 };
-        point.power = calculatePower(distMeters);
-
-        const realDist = distance(playerLat,playerLng,lat,lng);
-        point.adsRequired = Math.ceil(realDist/100);
-
-        console.log(`Точка ${i+1}: дистанция=${realDist.toFixed(1)}м, рекламы=${point.adsRequired}, мощность=${point.power}`);
-        points.push(point);
-
-        marker.on('click', () => openPointModal(point));
-    }
-}
-
-// ===== Расчет мощности =====
-function calculatePower(distMeters) {
-    if(distMeters<100) return 0;
-    const hundreds = Math.floor((distMeters-1)/100);
-    return hundreds*4;
-}
-
-// ===== Станции =====
-let stationMarkers={}, stationsData={};
-
-function loadStations(){
-    fetch("/stations")
-    .then(r=>r.json())
-    .then(stations=>{
-        stations.forEach(s=>{
-            if(stationMarkers[s.id]) return;
-            stationsData[s.id] = { owner:s.owner, power:s.power, rate:s.rate||0.1, lastCollected:s.lastCollected||0, displayedPower:0 };
-            const iconHtml = `<div style="position:relative; text-align:center;">
-                <div id="counter-${s.id}" style="color:gold; font-weight:bold; font-size:14px; text-shadow:0 0 3px #000;">0.0</div>
-                <img src="https://cdn-icons-png.flaticon.com/512/428/428734.png" style="width:24px;height:24px;margin:0 auto;display:block;">
-            </div>`;
-            const icon = L.divIcon({ html:iconHtml, className:'', iconSize:[30,40], iconAnchor:[15,40] });
-            const marker = L.marker([s.lat,s.lng], { icon:icon }).addTo(map);
-            marker.bindPopup(`<b>Станция</b><br>Владелец:${s.owner}<br>Энергия:${s.power.toFixed(1)}<br>${s.owner==playerId?'<button onclick="collectStation('+s.id+')">Собрать</button>':'<i>Чужая станция</i>'}`);
-            stationMarkers[s.id] = marker;
-        });
-        requestAnimationFrame(updateWattCounters);
-    });
-}
-
-function updateWattCounters(){
-    for(const id in stationsData){
-        const st = stationsData[id];
-        st.displayedPower += (st.power - st.displayedPower)*0.1;
-        const counter = document.getElementById(`counter-${id}`);
-        if(counter) counter.textContent = st.displayedPower.toFixed(1);
-    }
-    requestAnimationFrame(updateWattCounters);
-}
-
-setInterval(()=>{
-    const now=Date.now();
-    for(const id in stationsData){
-        const st=stationsData[id];
-        st.power+=st.rate;
-        if(stationMarkers[id]){
-            stationMarkers[id].bindPopup(`<b>Станция</b><br>Владелец:${st.owner}<br>Энергия:${st.power.toFixed(1)}<br>${st.owner==playerId?'<button onclick="collectStation('+id+')">Собрать</button>':'<i>Чужая станция</i>'}`);
-        }
-    }
-},1000);
-
-function collectStation(id){
-    const st = stationsData[id];
-    const now = Date.now();
-    if(st.lastCollected && (now-st.lastCollected < 24*3600*1000)){ alert("Собрать можно раз в сутки!"); return; }
-    fetch("/station/collect",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({station_id:id, player_id:playerId, power:st.power})
-    }).then(r=>r.json()).then(data=>{
-        alert("Собрано: "+st.power.toFixed(1));
-        st.power=0; st.lastCollected=now;
-        savePlayerPower();
-    });
-}
-
-// ===== Джойстик =====
-const joystick=document.getElementById('joystick'), container=document.getElementById('joystick-container');
-let dragging=false;
-function updateVector(dx,dy){
-    const len=Math.hypot(dx,dy);
-    if(len===0){ moveX=0; moveY=0; return; }
-    moveX=(dx/len)*STEP_DEGREE;
-    moveY=(-dy/len)*STEP_DEGREE;
-}
-joystick.addEventListener('pointerdown',()=>dragging=true);
-document.addEventListener('pointerup',()=>{ dragging=false; joystick.style.transform='translate(0,0)'; updateVector(0,0); });
-document.addEventListener('pointermove',e=>{
-    if(!dragging) return;
-    const r=container.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    let dx=e.clientX-cx, dy=e.clientY-cy;
-    const max=r.width/2-40, dist=Math.min(Math.hypot(dx,dy),max), ang=Math.atan2(dy,dx);
-    dx=dist*Math.cos(ang); dy=dist*Math.sin(ang);
-    joystick.style.transform=`translate(${dx}px,${dy}px)`;
-    updateVector(dx,dy);
-});
-
-// ===== Интервал движения игрока =====
-setInterval(()=>{
-    if(!mapReady) return;
-
-    if(movingToPoint && activePoint){
-        const dx=activePoint.lng-playerLng, dy=activePoint.lat-playerLat, dist=Math.hypot(dx,dy), speed=0.02;
-        if(dist<0.00005){ // дошли
-            collectPoint(activePoint,"через рекламу");
-            closePointModal();
-            movingToPoint=false;
-            activePoint=null;
-        } else {
-            playerLat += (dy/dist)*STEP_DEGREE*1200*speed;
-            playerLng += (dx/dist)*STEP_DEGREE*1200*speed;
-            if(userMarker) userMarker.setLatLng([playerLat,playerLng]);
-            map.setView([playerLat,playerLng], map.getZoom(),{animate:false});
-        }
-    } else {
-        playerLat += moveY;
-        playerLng += moveX;
-        if(userMarker) userMarker.setLatLng([playerLat,playerLng]);
-        map.setView([playerLat,playerLng], map.getZoom(),{animate:false});
-    }
-},50);
-
-// ===== Расстояние =====
-function distance(lat1,lon1,lat2,lon2){
-    const R=6371000;
-    const dLat=(lat2-lat1)*Math.PI/180;
-    const dLon=(lon2-lon1)*Math.PI/180;
-    const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-// ===== Модальное окно точки =====
-function openPointModal(point){
-    activePoint=point; point.adsViewed=0;
-    const modal=document.getElementById('point-modal');
-    modal.style.display='flex';
-    const dist=distance(playerLat,playerLng,point.lat,point.lng);
-    document.getElementById('pm-info').innerHTML = `
-        Расстояние: ${dist.toFixed(1)} м<br>
-        Нужно рекламы: ${point.adsRequired}<br>
-        Мощность: ${point.power.toFixed(1)}
-    `;
-    document.getElementById('ads-count').textContent = point.adsViewed;
-}
-
-// ===== Кнопка рекламы =====
-document.getElementById('watch-ad-btn').onclick = async () => {
-    if(!activePoint) return;
-    const watched = await AdManager.show();
-    if(!watched) return;
-
-    activePoint.adsViewed++;
-    document.getElementById('ads-count').textContent = activePoint.adsViewed;
-
-    if(activePoint.adsViewed >= activePoint.adsRequired){
-        movingToPoint = true; // маркер пойдет к точке
-    }
-};
-
-// ===== Move player к точке =====
-function movePlayerToPoint(point, callback){
-    movingToPoint = true;
-}
-
-// ===== Сбор точки =====
-function collectPoint(point, reason=""){
-    if(point.collected) return;
-    point.collected=true;
-    playerPower += point.power;
-    document.getElementById('power-total').textContent = playerPower.toFixed(1);
-    savePlayerPower();
-    if(point.marker) map.removeLayer(point.marker);
-    alert(`Точка собрана ${reason}! Получено ${point.power.toFixed(1)} ват`);
-}
-
-// ===== Закрыть модалку =====
-function closePointModal(){
-    document.getElementById('point-modal').style.display='none';
-    activePoint=null;
-    movingToPoint=false;
-}
-
-// ===== Сохранение / загрузка мощности =====
-async function loadPlayerPower(){
-    try{
-        const resp = await fetch(`/player/${playerId}`);
-        if(resp.ok){
-            const data = await resp.json();
-            playerPower = data.power||0;
-            document.getElementById('power-total').textContent=playerPower.toFixed(1);
-        }
-    }catch(e){ console.error(e); }
-}
-
-async function savePlayerPower(){
-    try{
-        await fetch(`/player/${playerId}`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({power:playerPower})
-        });
-    }catch(e){ console.error(e); }
-}
-
-// ===== Заглушка рекламы =====
-const AdManager = { provider:"mock", show: showAd };
-function showAd(){
-    return new Promise(resolve=>{
-        console.log("Реклама началась");
-        setTimeout(()=>{ console.log("Реклама досмотрена"); resolve(true); },3000);
-    });
-}
-
-// ===== Overlay рекламы =====
-function showAdOverlay(show){
-    const overlay=document.getElementById('ad-overlay');
-    overlay.style.display = show?"flex":"none";
-}
+</head>  
+<body>  
+<h1>KWT Mini App Prototype</h1>  
+<div class="controls">  
+    <button id="watch-ad-btn" class="btn">Посмотреть рекламу</button>  
+    <p>Мощность в кабинете: <span id="power-total">0</span> ват</p>  
+    <p>💰 Кэш: <span id="cash-total">0</span></p>  
+    <p>🔋 Мои станции: <span id="stations-count">0</span></p>  
+</div>  
+<p id="message"></p>  
+<div id="map"></div>  
+<div id="joystick-container"><div id="joystick"></div></div>  
+<img id="splash-img" src="https://via.placeholder.com/500x500.png?text=KWT+Splash">  
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>  <div id="point-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:20000;">  
+  <div style="background:#1b002b; padding:20px; border-radius:12px; width:90%; max-width:320px; text-align:center; border:2px solid gold;">  
+    <h3>📍 Энергетическая точка</h3>  
+    <p id="pm-info">Информация о точке</p>  
+    <p>Просмотрено рекламы: <span id="ads-count">0</span></p>  
+    <button class="btn" id="pm-ad-btn">Смотреть рекламу</button>  
+    <button class="btn" onclick="closePointModal()">Закрыть</button>  
+  </div>  
+</div>  
+<script src="/static/js/main.js"></script>  
+<button class="btn" onclick="closePointModal()">Закрыть</button>  
+  </div>  
+</div>  
+<script src="/static/js/main.js"></script>  
+<div id="ad-overlay" style="  
+display:none;  
+position:fixed;  
+inset:0;  
+background:#000;  
+color:#0f0;  
+z-index:9999;  
+font-size:24px;  
+align-items:center;  
+justify-content:center;">  
+📺 Просмотр рекламы…  
+</div>  
+<script src="point_icon.png"></script>  
+<script src="/static/js/ads.js"></script>  
+<script src="/static/js/main.js"></script>  
+</body>  
+</html>
