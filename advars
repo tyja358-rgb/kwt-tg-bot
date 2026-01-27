@@ -233,36 +233,49 @@ function openPointModal(point){
 
 // ===== Кнопка рекламы в модальном окне =====
 document.getElementById('pm-ad-btn').onclick = async () => {
-    if (!activePoint) return; // если нет активной точки — выходим
+    if (!activePoint) return; // нет активной точки — выходим
 
-    // показать оверлей рекламы
+    // Показ overlay поверх всего
     showAdOverlay(true);
 
-    // показываем рекламу через AdManager
+    // Запуск рекламы
     const watched = await AdManager.show();
 
-    // скрыть оверлей
+    // Скрыть overlay после рекламы
     showAdOverlay(false);
 
-    if (!watched) return;
+    if (!watched) return; // если не досмотрел — выходим
 
-    // увеличиваем счетчик рекламы для точки
+    // Увеличиваем счетчик рекламы для точки
     activePoint.adsViewed++;
 
-    // обновляем отображение в модальном окне
+    // Обновляем отображение в модалке
     document.getElementById('ads-count').textContent = activePoint.adsViewed;
 
-    // если досмотрели всю рекламу — начинаем движение к точке
+    // Если досмотрели всю рекламу — начинаем движение к точке
     if (activePoint.adsViewed >= activePoint.adsRequired) {
-        // включаем движение к точке
-        movingToPoint = true;
-
-        // закрываем модалку, но НЕ обнуляем activePoint
-        document.getElementById('point-modal').style.display = 'none';
-        // активная точка остается глобальной, чтобы интервал движения сработал
+        movingToPoint = true;      // маркер начинает движение
+        document.getElementById('point-modal').style.display = 'none'; // скрываем модалку
+        // не обнуляем activePoint! чтобы интервал движения сработал
     }
 };
 
+// ===== Overlay рекламы =====
+function showAdOverlay(show){
+    const overlay = document.getElementById('ad-overlay');
+    overlay.style.display = show ? 'flex' : 'none';
+    overlay.style.zIndex = 30000;        // поверх всего
+    overlay.style.position = 'fixed';
+    overlay.style.inset = 0;
+    overlay.style.background = 'rgba(0,0,0,0.9)';
+    overlay.style.color = '#0f0';
+    overlay.style.fontSize = '24px';
+    overlay.style.fontWeight = 'bold';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.textAlign = 'center';
+    overlay.style.pointerEvents = 'all';
+}
 // ===== Move player к точке =====
 function movePlayerToPoint(point, callback){
     movingToPoint = true;
