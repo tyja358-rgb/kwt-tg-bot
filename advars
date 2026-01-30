@@ -3,36 +3,26 @@ from dotenv import load_dotenv
 import os
 import requests
 from openai import OpenAI
+from werkzeug.utils import secure_filename
 
 # =========================
-# Загрузка .env
+# Настройка
 # =========================
 load_dotenv("/home/ArgoAetherium/Aetherium/.env")
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-# =========================
-# OpenAI client (НОВЫЙ API)
-# =========================
 client = OpenAI(api_key=OPENAI_KEY)
 
-# =========================
-# Flask app
-# =========================
 app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # =========================
-# Root (проверка)
-# =========================
-@app.route("/", methods=["GET"])
-def index():
-    return "Aetherium server is running ✅"
-
-# =========================
-# Telegram Mini App (WebApp)
+# MiniApp Web
 # =========================
 @app.route("/webapp", methods=["GET"])
 def webapp():
@@ -41,139 +31,175 @@ def webapp():
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Aetherium AI Chat</title>
+<title>Aetherium AI Chat + Voice</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-    font-family: Arial;
-    background: #f5f5f5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 0;
-    padding: 10px;
-}
-h2 { margin: 10px 0; }
-#chat {
-    width: 100%;
-    max-width: 420px;
-    height: 60vh;
-    background: white;
-    border-radius: 10px;
-    padding: 10px;
-    overflow-y: auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-.msg {
-    margin: 6px 0;
-    padding: 8px 12px;
-    border-radius: 14px;
-    max-width: 80%;
-}
-.user { background: #d1e7ff; align-self: flex-end; }
-.ai { background: #e2ffe2; align-self: flex-start; }
-#inputBox {
-    width: 100%;
-    max-width: 420px;
-    display: flex;
-    margin-top: 10px;
-}
-input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-}
-button {
-    margin-left: 6px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: none;
-    background: #4CAF50;
-    color: white;
-    font-weight: bold;
-}
+body { font-family: Arial; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; margin:0; padding:10px; }
+#chat { width:100%; max-width:420px; height:60vh; background:white; border-radius:10px; padding:10px; overflow-y:auto; }
+.msg { margin:6px 0; padding:8px 12px; border-radius:14px; max-width:80%; }
+.user { background:#d1e7ff; align-self:flex-end; }
+.ai { background:#e2ffe2; align-self:flex-start; }
+#inputBox { width:100%; max-width:420px; display:flex; margin-top:10px; }
+input { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; }
+button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold; }
 </style>
 </head>
 <body>
-
 <h2>Aetherium AI 🤖</h2>
 <div id="chat"></div>
-
 <div id="inputBox">
 <input id="text" placeholder="Напиши сообщение..." />
 <button onclick="send()">▶</button>
+<button id="recordBtn">🎤</button>
 </div>
 
 <script>
-const chat = document.getElementById("chat");
+const chat=document.getElementById("chat");
+let mediaRecorder, audioChunks=[];
 
-function add(text, cls) {
-    const d = document.createElement("div");
-    d.className = "msg " + cls;
-    d.innerText = text;
+function add(text,cls){
+    const d=document.createElement("div");
+    d.className="msg "+cls;
+    d.innerText=text;
     chat.appendChild(d);
-    chat.scrollTop = chat.scrollHeight;
+    chat.scrollTop=chat.scrollHeight;
 }
 
-async function send() {
-    const input = document.getElementById("text");
-    const text = input.value.trim();
-    if (!text) return;
-
-    add(text, "user");
-    input.value = "";
-    add("Думаю...", "ai");
-
-    try {
-        const res = await fetch("/ask_ai", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({message: text})
-        });
-        const data = await res.json();
-        chat.lastChild.innerText = data.reply;
-    } catch (e) {
-        chat.lastChild.innerText = "Ошибка соединения";
-    }
+async function send(){
+    const input=document.getElementById("text");
+    const text=input.value.trim();
+    if(!text) return;
+    add(text,"user"); input.value="";
+    add("Думаю...","ai");
+    try{
+        const res=await fetch("/ask_ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
+        const data=await res.json();
+        chat.lastChild.innerText=data.reply;
+    }catch(e){chat.lastChild.innerText="Ошибка соединения";}
 }
 
-document.getElementById("text").addEventListener("keypress", e => {
-    if (e.key === "Enter") send();
+document.getElementById("text").addEventListener("keypress",e=>{if(e.key==="Enter") send();});
+
+// =========================
+// Voice recording
+const recordBtn=document.getElementById("recordBtn");
+let stream;
+
+recordBtn.addEventListener("mousedown", async ()=>{
+    if(!navigator.mediaDevices) return alert("Ваш браузер не поддерживает запись аудио.");
+    audioChunks=[];
+    stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder=new MediaRecorder(stream);
+    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+    mediaRecorder.start();
+});
+
+recordBtn.addEventListener("mouseup", async ()=>{
+    mediaRecorder.stop();
+    mediaRecorder.onstop=async ()=>{
+        const blob=new Blob(audioChunks,{type:"audio/webm"});
+        const formData=new FormData();
+        formData.append("file",blob,"voice.webm");
+        add("Говорю...","user");
+        add("Распознаю...","ai");
+        try{
+            const res=await fetch("/whisper",{method:"POST",body:formData});
+            const data=await res.json();
+            chat.lastChild.innerText=data.text;
+            if(data.text){
+                const aiRes=await fetch("/ask_ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:data.text})});
+                const aiData=await aiRes.json();
+                add(aiData.reply,"ai");
+            }
+        }catch(e){chat.lastChild.innerText="Ошибка распознавания";}
+        stream.getTracks().forEach(track=>track.stop());
+    };
 });
 </script>
-
 </body>
 </html>
 """
 
 # =========================
-# AI endpoint (НОВЫЙ OpenAI)
+# Whisper endpoint
+# =========================
+@app.route("/whisper", methods=["POST"])
+def whisper():
+    if "file" not in request.files:
+        return jsonify({"text":""})
+    file=request.files["file"]
+    filename=secure_filename(file.filename)
+    path=os.path.join(app.config["UPLOAD_FOLDER"],filename)
+    file.save(path)
+
+    try:
+        audio_file=open(path,"rb")
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+        audio_file.close()
+        os.remove(path)
+        return jsonify({"text":transcription.text})
+    except Exception as e:
+        return jsonify({"text":f"Ошибка распознавания: {e}"})
+
+# =========================
+# AI endpoint
 # =========================
 @app.route("/ask_ai", methods=["POST"])
 def ask_ai():
-    data = request.get_json()
-    user_text = data.get("message", "")
-
+    user_text=request.get_json().get("message","")
     try:
-        response = client.chat.completions.create(
+        resp=client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Ты дружелюбный AI помощник проекта Aetherium."},
-                {"role": "user", "content": user_text}
+                {"role":"system","content":"Ты дружелюбный AI помощник проекта Aetherium."},
+                {"role":"user","content":user_text}
             ],
             temperature=0.7
         )
-
-        reply = response.choices[0].message.content
-        return jsonify({"reply": reply})
-
+        reply=resp.choices[0].message.content
+        return jsonify({"reply":reply})
     except Exception as e:
-        return jsonify({"reply": f"Ошибка AI: {e}"}), 500
-
+        return jsonify({"reply":f"Ошибка AI: {e}"}),500
 
 # =========================
-# Локальный запуск (НЕ PythonAnywhere)
+# Telegram webhook
 # =========================
-if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    update=request.get_json()
+    if not update: return "no update",400
+    message=update.get("message")
+    if message:
+        chat_id=message["chat"]["id"]
+        text=message.get("text","")
+        if text:
+            try:
+                resp=client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role":"system","content":"Ты дружелюбный AI помощник проекта Aetherium."},
+                        {"role":"user","content":text}
+                    ],
+                    temperature=0.7
+                )
+                reply_text=resp.choices[0].message.content
+            except Exception as e:
+                reply_text=f"Ошибка AI: {e}"
+            requests.post(f"{BASE_URL}/sendMessage",json={"chat_id":chat_id,"text":reply_text})
+    return "ok",200
+
+# =========================
+# Root (проверка)
+# =========================
+@app.route("/", methods=["GET"])
+def index_root():
+    return "Aetherium server is running ✅"
+
+# =========================
+# Локальный запуск
+# =========================
+if __name__=="__main__":
+    app.run(debug=True,port=5001)
