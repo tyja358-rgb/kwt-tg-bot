@@ -1,6 +1,24 @@
-if role == "programmer":
-    system_msg = (
-        "Ты AI-программист, который даёт готовый код на Python. "
-        "Ответ давай **в красиво отформатированном, читаемом виде** с правильными отступами. "
-        "Не объединяй код в одну строку. Используй комментарии по необходимости."
-    )
+# -------------------------
+# Создание папки на диске
+# -------------------------
+if user_text.lower().startswith("создай папку"):
+    try:
+        # Получаем путь из команды, например: "создай папку docs/reports/2026"
+        folder_path = user_text.split(" ", 2)[-1].strip()
+
+        # Корень проекта (обязательно полный путь)
+        project_root = "/home/ArgoAetherium/Aetherium"
+
+        # Полный путь к новой папке
+        full_path = os.path.join(project_root, folder_path)
+
+        # Создаём все вложенные папки реально на диске
+        os.makedirs(full_path, exist_ok=True)
+
+        # Проверяем, что папка действительно создана
+        if os.path.exists(full_path):
+            return f"Папка '{folder_path}' успешно создана на диске ✅\nПолный путь: {full_path}"
+        else:
+            return f"Не удалось создать папку '{folder_path}' на диске ❌"
+    except Exception as e:
+        return f"Ошибка при создании папки: {e}"
