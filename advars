@@ -1,4 +1,6 @@
-from flask import Flask, request, jsonify
+# Aetherium/app.py
+from bots.personal_bot.bot import handle_request
+from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import os
 import requests
@@ -17,9 +19,17 @@ BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 client = OpenAI(api_key=OPENAI_KEY)
 
 app = Flask(__name__)
+
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# =========================
+# Root (проверка)
+# =========================
+@app.route("/", methods=["GET"])
+def index_root():
+    return "Aetherium server is running ✅"
 
 # =========================
 # MiniApp Web
@@ -55,7 +65,9 @@ button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; bac
 
 <script>
 const chat=document.getElementById("chat");
-let mediaRecorder, audioChunks=[];
+const input=document.getElementById("text");
+const recordBtn=document.getElementById("recordBtn");
+let stream, mediaRecorder, audioChunks=[], isRecording=false;
 
 function add(text,cls){
     const d=document.createElement("div");
@@ -66,54 +78,68 @@ function add(text,cls){
 }
 
 async function send(){
-    const input=document.getElementById("text");
     const text=input.value.trim();
     if(!text) return;
     add(text,"user"); input.value="";
-    add("Думаю...","ai");
+    add("🧠 Думаю...","ai");
     try{
-        const res=await fetch("/ask_ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
+        const res=await fetch("/ask_ai",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({message:text})
+        });
         const data=await res.json();
         chat.lastChild.innerText=data.reply;
     }catch(e){chat.lastChild.innerText="Ошибка соединения";}
 }
 
-document.getElementById("text").addEventListener("keypress",e=>{if(e.key==="Enter") send();});
+input.addEventListener("keypress", e=>{if(e.key==="Enter") send();});
 
-// =========================
-// Voice recording
-const recordBtn=document.getElementById("recordBtn");
-let stream;
-
-recordBtn.addEventListener("mousedown", async ()=>{
-    if(!navigator.mediaDevices) return alert("Ваш браузер не поддерживает запись аудио.");
-    audioChunks=[];
+// === Voice recording ===
+async function initMic(){
+    if(stream) return;
     stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    mediaRecorder=new MediaRecorder(stream);
-    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-    mediaRecorder.start();
-});
+}
 
-recordBtn.addEventListener("mouseup", async ()=>{
-    mediaRecorder.stop();
-    mediaRecorder.onstop=async ()=>{
-        const blob=new Blob(audioChunks,{type:"audio/webm"});
-        const formData=new FormData();
-        formData.append("file",blob,"voice.webm");
-        add("Говорю...","user");
-        add("Распознаю...","ai");
-        try{
-            const res=await fetch("/whisper",{method:"POST",body:formData});
-            const data=await res.json();
-            chat.lastChild.innerText=data.text;
-            if(data.text){
-                const aiRes=await fetch("/ask_ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:data.text})});
-                const aiData=await aiRes.json();
-                add(aiData.reply,"ai");
-            }
-        }catch(e){chat.lastChild.innerText="Ошибка распознавания";}
-        stream.getTracks().forEach(track=>track.stop());
-    };
+recordBtn.addEventListener("click", async ()=>{
+    try{
+        await initMic();
+        if(!isRecording){
+            audioChunks=[];
+            mediaRecorder=new MediaRecorder(stream);
+            mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+            mediaRecorder.start();
+            isRecording=true;
+            recordBtn.innerText="⏹";
+        }else{
+            mediaRecorder.stop();
+            isRecording=false;
+            recordBtn.innerText="🎤";
+            mediaRecorder.onstop=async ()=>{
+                const blob=new Blob(audioChunks,{type:"audio/webm"});
+                const formData=new FormData();
+                formData.append("file",blob,"voice.webm");
+
+                add("🎤 Говорю…","user");
+                add("🧠 Распознаю…","ai");
+
+                try{
+                    const res=await fetch("/whisper",{method:"POST",body:formData});
+                    const data=await res.json();
+                    chat.lastChild.innerText=data.text || "Не распознал";
+                    if(data.text){
+                        const aiRes=await fetch("/ask_ai",{
+                            method:"POST",
+                            headers:{"Content-Type":"application/json"},
+                            body:JSON.stringify({message:data.text})
+                        });
+                        const aiData=await aiRes.json();
+                        add(aiData.reply,"ai");
+                    }
+                }catch(e){chat.lastChild.innerText="Ошибка распознавания";}
+            };
+        }
+    }catch(e){alert("Не удалось получить доступ к микрофону");}
 });
 </script>
 </body>
@@ -133,16 +159,12 @@ def whisper():
     file.save(path)
 
     try:
-        audio_file=open(path,"rb")
-        transcription = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file
-        )
-        audio_file.close()
+        with open(path,"rb") as audio_file:
+            transcription = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
         os.remove(path)
         return jsonify({"text":transcription.text})
     except Exception as e:
-        return jsonify({"text":f"Ошибка распознавания: {e}"})
+        return jsonify({"text":f"Ошибка распознавания: {e}"}),500
 
 # =========================
 # AI endpoint
@@ -159,8 +181,7 @@ def ask_ai():
             ],
             temperature=0.7
         )
-        reply=resp.choices[0].message.content
-        return jsonify({"reply":reply})
+        return jsonify({"reply":resp.choices[0].message.content})
     except Exception as e:
         return jsonify({"reply":f"Ошибка AI: {e}"}),500
 
@@ -190,13 +211,6 @@ def webhook():
                 reply_text=f"Ошибка AI: {e}"
             requests.post(f"{BASE_URL}/sendMessage",json={"chat_id":chat_id,"text":reply_text})
     return "ok",200
-
-# =========================
-# Root (проверка)
-# =========================
-@app.route("/", methods=["GET"])
-def index_root():
-    return "Aetherium server is running ✅"
 
 # =========================
 # Локальный запуск
