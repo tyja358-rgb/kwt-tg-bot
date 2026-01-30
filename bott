@@ -1,42 +1,52 @@
-from flask import Flask, request
-import os
-import requests
-from dotenv import load_dotenv
+# bots/personal_bot/bot.py
 from openai import OpenAI
+import os
+from .auto_edit import replace_programmer_block
+from .memory_handler import load_memory, save_memory
 
-# ====== Настройки ======
-load_dotenv("/home/ArgoAetherium/Aetherium/.env")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
-client = OpenAI(api_key=OPENAI_KEY)
+# Загружаем память при старте
+memory = load_memory()
 
-app = Flask(__name__)
+def handle_request(user_text, role=None):
+    """
+    role: "user", "programmer" или None
+    """
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+    if not OPENAI_KEY:
+        return "Ошибка: OPENAI_API_KEY не задан!"
+    client = OpenAI(api_key=OPENAI_KEY)
 
-# ====== Telegram webhook ======
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    update = request.get_json()
-    if not update:
-        return "no update", 400
+    # Команда для обновления правил программиста
+    if "обнови правила программиста" in user_text.lower():
+        # Пример: пользователь пишет "обнови правила программиста: ..."
+        new_msg = user_text.split(":", 1)[-1].strip()
+        memory["programmer_system_msg"] = new_msg
+        save_memory(memory)
+        return "Правила программиста обновлены ✅"
 
-    message = update.get("message")
-    if message:
-        chat_id = message["chat"]["id"]
-        text = message.get("text", "")
-        if text:
-            try:
-                resp = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": "Ты дружелюбный AI помощник проекта Aetherium."},
-                        {"role": "user", "content": text}
-                    ],
-                    temperature=0.7
-                )
-                reply_text = resp.choices[0].message.content
-            except Exception as e:
-                reply_text = f"Ошибка AI: {e}"
-            requests.post(f"{BASE_URL}/sendMessage", json={"chat_id": chat_id, "text": reply_text})
+    # Команда для автоматической замены блока programmer
+    if "замени блок programmer на красиво отформатированный" in user_text.lower():
+        file_path = os.path.join(os.path.dirname(__file__), "bot.py")
+        return replace_programmer_block(file_path)
 
-    return "ok", 200
+    # Автоопределение роли
+    if role is None:
+        code_triggers = ["функция", "код", "python", "пример", "скрипт", "программа"]
+        if any(word.lower() in user_text.lower() for word in code_triggers):
+            role = "programmer"
+        else:
+            role = "user"
+
+    # Используем системное сообщение из памяти
+    system_msg = memory["programmer_system_msg"] if role == "programmer" else memory["user_system_msg"]
+
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_text}
+        ],
+        temperature=0.7
+    )
+
+    return resp.choices[0].message.content
