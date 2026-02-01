@@ -1,38 +1,59 @@
-# =========================
-# AI endpoint
-# =========================
-@app.route("/ask_ai", methods=["POST"])
-def ask_ai():
+def handle_request(text: str, user_id: Optional[int] = None) -> str:
     """
-    Получает JSON: {"message": "текст", "user_id": 123456789}
-    Проверяет, OWNER ли user_id, и передаёт в handle_request
+    Главная точка входа ассистента Aetherium
     """
-    data = request.get_json() or {}
-    user_text = data.get("message", "")
-    chat_id = data.get("user_id")  # <-- важно, чтобы Telegram прислал chat_id
 
-    # Если chat_id нет, используем None
-    reply_text = handle_request(user_text, user_id=chat_id)
+    # -------------------------
+    # Определяем intent
+    # -------------------------
+    intent = detect_intent(text)
 
-    return jsonify({"reply": reply_text})
+    # -------------------------
+    # Логируем входящие данные
+    # -------------------------
+    print(f"DEBUG: Входящий user_id={user_id}, текст='{text}', intent={intent}")
 
+    # -------------------------
+    # Определяем режим
+    # -------------------------
+    mode = MODE_OWNER if user_id in OWNER_IDS else MODE_USER
+    print(f"DEBUG: Определён режим: {mode}")
 
+    # -------------------------
+    # Сохраняем входящее сообщение
+    # -------------------------
+    if user_id is not None:
+        add_message(user_id, "user", text)
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    update = request.get_json()
-    if not update:
-        return "no update", 400
+    # -------- OWNER --------
+    if mode == MODE_OWNER:
+        if intent == "owner_command":
+            reply = (
+                "Команду понял.\n"
+                "Напиши ЧЁТКО:\n"
+                "• действие\n"
+                "• путь\n"
+                "• подтверждение"
+            )
+        else:
+            reply = "Я готов. Что делаем?"
 
-    message = update.get("message")
-    if message:
-        chat_id = message["chat"]["id"]   # <-- берём реальный chat_id
-        text = message.get("text", "")
+    # -------- USER --------
+    else:
+        if intent == "owner_command":
+            reply = "Эта функция недоступна 🙂"
+        else:
+            reply = "Привет! Задай вопрос."
 
-        # передаем в handle_request корректный user_id
-        reply_text = handle_request(text, user_id=chat_id)
+    # -------------------------
+    # Логируем ответ ассистента
+    # -------------------------
+    print(f"DEBUG: Ответ ассистента для user_id={user_id}: {reply}")
 
-        # отправляем ответ обратно
-        requests.post(f"{BASE_URL}/sendMessage", json={"chat_id": chat_id, "text": reply_text})
+    # -------------------------
+    # Сохраняем ответ
+    # -------------------------
+    if user_id is not None:
+        add_message(user_id, "assistant", reply)
 
-    return "ok", 200
+    return reply
