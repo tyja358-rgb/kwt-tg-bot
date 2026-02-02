@@ -1,104 +1,91 @@
-from assistant.assistant import handle_request as handle_assistant_request
-from flask import Flask, request, jsonify, render_template_string
-from dotenv import load_dotenv
+# marketplace_bot.py
 import os
-from openai import OpenAI
+from dotenv import load_dotenv
+import openai
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import requests
+import datetime
 
-load_dotenv("/home/ArgoAetherium/Aetherium/.env")
+# ===== Загрузка токенов из .env =====
+load_dotenv()  # автоматически ищет .env в корне проекта
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_KEY:
-    raise ValueError("OPENAI_API_KEY не задан!")
+openai.api_key = OPENAI_API_KEY
 
-client = OpenAI(api_key=OPENAI_KEY)
+# ===== Вспомогательные функции =====
+def get_weather(city="Chisinau"):
+    """Возвращает текущую погоду (пример)"""
+    try:
+        r = requests.get(
+            "https://api.open-meteo.com/v1/forecast?latitude=47.01&longitude=28.86&current_weather=true"
+        )
+        data = r.json()
+        temp = data['current_weather']['temperature']
+        condition = data['current_weather']['weathercode']
+        return f"{temp}°C, код погоды: {condition}"
+    except:
+        return "нет данных о погоде"
 
-app = Flask(__name__)
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+def get_day_info():
+    """Возвращает день недели и дату"""
+    today = datetime.datetime.now()
+    weekday = today.strftime("%A")
+    date = today.strftime("%Y-%m-%d")
+    return weekday, date
 
-@app.route("/", methods=["GET"])
-def index_root():
-    return "Aetherium server is running ✅"
+# ===== Команды бота =====
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Привет! Я AI-ассистент по маркетплейсам.\n"
+        "Спроси меня о трендах товаров, и я дам рекомендации с тепловой картой."
+    )
 
-@app.route("/ask_ai", methods=["POST"])
-def ask_ai():
-    data = request.get_json()
-    text = data.get("message", "")
-    # Передаем фиксированный user_id для теста
-    user_id = data.get("user_id", 8145632503)
-    reply = handle_assistant_request(text, user_id)
-    return jsonify({"reply": reply})
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Просто напиши вопрос вроде:\n"
+        "'Какие товары лучше всего продавать на 999.md в Молдове сегодня?'\n"
+        "Я учту день недели, погоду, праздники и дам рекомендации."
+    )
 
-@app.route("/webapp", methods=["GET"])
-def webapp():
-    html = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Aetherium AI Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body { font-family: Arial; background: #f5f5f5; display:flex; flex-direction: column; align-items:center; margin:0; padding:10px;}
-#chat { width:100%; max-width:420px; height:60vh; background:white; border-radius:10px; padding:10px; overflow-y:auto;}
-.msg { margin:6px 0; padding:8px 12px; border-radius:14px; max-width:80%;}
-.user { background:#d1e7ff; align-self:flex-end;}
-.ai { background:#e2ffe2; align-self:flex-start;}
-#inputBox { width:100%; max-width:420px; display:flex; margin-top:10px;}
-input { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc;}
-button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold;}
-</style>
-</head>
-<body>
-<h2>Aetherium AI 🤖</h2>
-<div id="chat"></div>
-<div id="inputBox">
-<input id="text" placeholder="Напиши сообщение..." />
-<button onclick="send()">▶</button>
-</div>
+def handle_message(update: Update, context: CallbackContext):
+    user_text = update.message.text
+    weekday, date = get_day_info()
+    weather = get_weather()
+    
+    prompt = (
+        f"Ты профессиональный аналитик маркетплейсов.\n"
+        f"Сегодня {date}, {weekday}, погода: {weather}.\n"
+        f"Пользователь спрашивает: {user_text}\n"
+        "Составь тепловую карту теоретически хороших для продажи товаров "
+        "на день, неделю и месяц, учитывая маркетплейс, страну, праздники и все тренды.\n"
+        "Предоставь рекомендации по товарам, категориям и оптимальным ценам."
+    )
+    
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+        answer = response['choices'][0]['message']['content']
+        update.message.reply_text(answer)
+    except Exception as e:
+        update.message.reply_text(f"Ошибка при генерации: {e}")
 
-<script>
-const chat = document.getElementById("chat");
-const input = document.getElementById("text");
+# ===== Основной запуск бота =====
+def main():
+    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    
+    print("Бот запущен...")
+    updater.start_polling()
+    updater.idle()
 
-// Фиксированный user_id для теста
-const user_id = 8145632503;
-
-function add(text, cls) {
-    const d = document.createElement("div");
-    d.className = "msg " + cls;
-    d.innerText = text;
-    chat.appendChild(d);
-    chat.scrollTop = chat.scrollHeight;
-}
-
-async function send() {
-    const text = input.value.trim();
-    if (!text) return;
-    add(text, "user");
-    input.value = "";
-    add("🧠 Думаю...", "ai");
-
-    try {
-        const res = await fetch("/ask_ai", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({message: text, user_id: user_id})
-        });
-        const data = await res.json();
-        chat.lastChild.innerText = data.reply;
-    } catch(e) {
-        chat.lastChild.innerText = "Ошибка соединения";
-    }
-}
-
-input.addEventListener("keypress", e => { if (e.key === "Enter") send(); });
-</script>
-</body>
-</html>
-"""
-    return render_template_string(html)
-
-if __name__=="__main__":
-    app.run(debug=True, port=5002)
+if __name__ == "__main__":
+    main()
