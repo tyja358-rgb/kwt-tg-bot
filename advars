@@ -1,57 +1,53 @@
-# Aetherium/app.py
-from bots.personal_bot.bot import handle_request
-from flask import Flask, request, jsonify, render_template
+from assistant.assistant import handle_request as handle_assistant_request
+from flask import Flask, request, jsonify, render_template_string
 from dotenv import load_dotenv
 import os
-import requests
 from openai import OpenAI
-from werkzeug.utils import secure_filename
 
-# =========================
-# Настройка
-# =========================
 load_dotenv("/home/ArgoAetherium/Aetherium/.env")
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+if not OPENAI_KEY:
+    raise ValueError("OPENAI_API_KEY не задан!")
 
 client = OpenAI(api_key=OPENAI_KEY)
 
 app = Flask(__name__)
-
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# =========================
-# Root (проверка)
-# =========================
 @app.route("/", methods=["GET"])
 def index_root():
     return "Aetherium server is running ✅"
 
-# =========================
-# MiniApp Web
-# =========================
+@app.route("/ask_ai", methods=["POST"])
+def ask_ai():
+    data = request.get_json()
+    text = data.get("message", "")
+    # Передаем фиксированный user_id для теста
+    user_id = data.get("user_id", 8145632503)
+    reply = handle_assistant_request(text, user_id)
+    return jsonify({"reply": reply})
+
 @app.route("/webapp", methods=["GET"])
 def webapp():
-    return """
+    html = """
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Aetherium AI Chat + Voice</title>
+<title>Aetherium AI Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; margin:0; padding:10px; }
-#chat { width:100%; max-width:420px; height:60vh; background:white; border-radius:10px; padding:10px; overflow-y:auto; }
-.msg { margin:6px 0; padding:8px 12px; border-radius:14px; max-width:80%; }
-.user { background:#d1e7ff; align-self:flex-end; }
-.ai { background:#e2ffe2; align-self:flex-start; }
-#inputBox { width:100%; max-width:420px; display:flex; margin-top:10px; }
-input { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; }
-button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold; }
+body { font-family: Arial; background: #f5f5f5; display:flex; flex-direction: column; align-items:center; margin:0; padding:10px;}
+#chat { width:100%; max-width:420px; height:60vh; background:white; border-radius:10px; padding:10px; overflow-y:auto;}
+.msg { margin:6px 0; padding:8px 12px; border-radius:14px; max-width:80%;}
+.user { background:#d1e7ff; align-self:flex-end;}
+.ai { background:#e2ffe2; align-self:flex-start;}
+#inputBox { width:100%; max-width:420px; display:flex; margin-top:10px;}
+input { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc;}
+button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold;}
 </style>
 </head>
 <body>
@@ -60,160 +56,49 @@ button { margin-left:6px; padding:10px 14px; border-radius:8px; border:none; bac
 <div id="inputBox">
 <input id="text" placeholder="Напиши сообщение..." />
 <button onclick="send()">▶</button>
-<button id="recordBtn">🎤</button>
 </div>
 
 <script>
-const chat=document.getElementById("chat");
-const input=document.getElementById("text");
-const recordBtn=document.getElementById("recordBtn");
-let stream, mediaRecorder, audioChunks=[], isRecording=false;
+const chat = document.getElementById("chat");
+const input = document.getElementById("text");
 
-function add(text,cls){
-    const d=document.createElement("div");
-    d.className="msg "+cls;
-    d.innerText=text;
+// Фиксированный user_id для теста
+const user_id = 8145632503;
+
+function add(text, cls) {
+    const d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.innerText = text;
     chat.appendChild(d);
-    chat.scrollTop=chat.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 }
 
-async function send(){
-    const text=input.value.trim();
-    if(!text) return;
-    add(text,"user"); input.value="";
-    add("🧠 Думаю...","ai");
-    try{
-        const res=await fetch("/ask_ai",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({message:text})
+async function send() {
+    const text = input.value.trim();
+    if (!text) return;
+    add(text, "user");
+    input.value = "";
+    add("🧠 Думаю...", "ai");
+
+    try {
+        const res = await fetch("/ask_ai", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message: text, user_id: user_id})
         });
-        const data=await res.json();
-        chat.lastChild.innerText=data.reply;
-    }catch(e){chat.lastChild.innerText="Ошибка соединения";}
+        const data = await res.json();
+        chat.lastChild.innerText = data.reply;
+    } catch(e) {
+        chat.lastChild.innerText = "Ошибка соединения";
+    }
 }
 
-input.addEventListener("keypress", e=>{if(e.key==="Enter") send();});
-
-// === Voice recording ===
-async function initMic(){
-    if(stream) return;
-    stream=await navigator.mediaDevices.getUserMedia({audio:true});
-}
-
-recordBtn.addEventListener("click", async ()=>{
-    try{
-        await initMic();
-        if(!isRecording){
-            audioChunks=[];
-            mediaRecorder=new MediaRecorder(stream);
-            mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-            mediaRecorder.start();
-            isRecording=true;
-            recordBtn.innerText="⏹";
-        }else{
-            mediaRecorder.stop();
-            isRecording=false;
-            recordBtn.innerText="🎤";
-            mediaRecorder.onstop=async ()=>{
-                const blob=new Blob(audioChunks,{type:"audio/webm"});
-                const formData=new FormData();
-                formData.append("file",blob,"voice.webm");
-
-                add("🎤 Говорю…","user");
-                add("🧠 Распознаю…","ai");
-
-                try{
-                    const res=await fetch("/whisper",{method:"POST",body:formData});
-                    const data=await res.json();
-                    chat.lastChild.innerText=data.text || "Не распознал";
-                    if(data.text){
-                        const aiRes=await fetch("/ask_ai",{
-                            method:"POST",
-                            headers:{"Content-Type":"application/json"},
-                            body:JSON.stringify({message:data.text})
-                        });
-                        const aiData=await aiRes.json();
-                        add(aiData.reply,"ai");
-                    }
-                }catch(e){chat.lastChild.innerText="Ошибка распознавания";}
-            };
-        }
-    }catch(e){alert("Не удалось получить доступ к микрофону");}
-});
+input.addEventListener("keypress", e => { if (e.key === "Enter") send(); });
 </script>
 </body>
 </html>
 """
+    return render_template_string(html)
 
-# =========================
-# Whisper endpoint
-# =========================
-@app.route("/whisper", methods=["POST"])
-def whisper():
-    if "file" not in request.files:
-        return jsonify({"text":""})
-    file=request.files["file"]
-    filename=secure_filename(file.filename)
-    path=os.path.join(app.config["UPLOAD_FOLDER"],filename)
-    file.save(path)
-
-    try:
-        with open(path,"rb") as audio_file:
-            transcription = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-        os.remove(path)
-        return jsonify({"text":transcription.text})
-    except Exception as e:
-        return jsonify({"text":f"Ошибка распознавания: {e}"}),500
-
-# =========================
-# AI endpoint
-# =========================
-@app.route("/ask_ai", methods=["POST"])
-def ask_ai():
-    user_text=request.get_json().get("message","")
-    try:
-        resp=client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role":"system","content":"Ты дружелюбный AI помощник проекта Aetherium."},
-                {"role":"user","content":user_text}
-            ],
-            temperature=0.7
-        )
-        return jsonify({"reply":resp.choices[0].message.content})
-    except Exception as e:
-        return jsonify({"reply":f"Ошибка AI: {e}"}),500
-
-# =========================
-# Telegram webhook
-# =========================
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    update=request.get_json()
-    if not update: return "no update",400
-    message=update.get("message")
-    if message:
-        chat_id=message["chat"]["id"]
-        text=message.get("text","")
-        if text:
-            try:
-                resp=client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role":"system","content":"Ты дружелюбный AI помощник проекта Aetherium."},
-                        {"role":"user","content":text}
-                    ],
-                    temperature=0.7
-                )
-                reply_text=resp.choices[0].message.content
-            except Exception as e:
-                reply_text=f"Ошибка AI: {e}"
-            requests.post(f"{BASE_URL}/sendMessage",json={"chat_id":chat_id,"text":reply_text})
-    return "ok",200
-
-# =========================
-# Локальный запуск
-# =========================
 if __name__=="__main__":
-    app.run(debug=True,port=5001)
+    app.run(debug=True, port=5002)
