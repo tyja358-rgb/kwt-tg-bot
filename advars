@@ -11,8 +11,12 @@ def generate_heatmap():
     heatmap += f"💄 Красота: {emoji} Увлажнение, ⚡ Парфюмерия, ❄ Летняя косметика\n"
     heatmap += f"🥦 Продукты: {emoji} Зимние фрукты, ⚡ Замороженные, ❄ Свежие овощи\n"
 
+    # ====== Пассажироперевозки ======
     try:
+        from analytics.passenger_interest import get_passenger_interest
         passenger = get_passenger_interest()
+        if passenger.get("total_ads", 0) == 0:
+            raise ValueError("Данные недоступны")
         heatmap += (
             "\n🚐 Пассажироперевозки (Молдова):\n"
             f"Объявлений: {passenger['total_ads']}\n"
@@ -20,7 +24,7 @@ def generate_heatmap():
             f"Просмотры: {passenger['views']}\n"
             f"Интерес: 🔥 {passenger['interest_score']}\n"
         )
-    except Exception as e:
+    except Exception:
         heatmap += "\n🚐 Пассажироперевозки: данные временно недоступны\n"
 
     return heatmap
