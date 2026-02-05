@@ -1,91 +1,26 @@
-# marketplace_bot.py
-import os
-from dotenv import load_dotenv
-import openai
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-import requests
-import datetime
+def generate_heatmap():
+    temp, weather_desc = get_weather()
+    emoji = demand_emoji(temp)
 
-# ===== Загрузка токенов из .env =====
-load_dotenv()  # автоматически ищет .env в корне проекта
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    heatmap = f"🌡 Погода в Кишинёве: {temp:.1f}°C, {weather_desc}\n\n"
+    heatmap += "🔥⚡❄ Тепловая карта спроса:\n\n"
+    heatmap += f"👗 Одежда и обувь: {emoji} Зимняя одежда, ⚡ Спортивная, ❄ Летняя\n"
+    heatmap += f"📱 Электроника: {emoji} Смартфоны, ⚡ Наушники, ❄ Компьютеры\n"
+    heatmap += f"🏠 Товары для дома: {emoji} Обогреватели, ⚡ Постель, ❄ Кухня\n"
+    heatmap += f"🏋️ Спорт: {emoji} Зимние виды спорта, ⚡ Спортивная обувь, ❄ Велосипеды\n"
+    heatmap += f"💄 Красота: {emoji} Увлажнение, ⚡ Парфюмерия, ❄ Летняя косметика\n"
+    heatmap += f"🥦 Продукты: {emoji} Зимние фрукты, ⚡ Замороженные, ❄ Свежие овощи\n"
 
-openai.api_key = OPENAI_API_KEY
-
-# ===== Вспомогательные функции =====
-def get_weather(city="Chisinau"):
-    """Возвращает текущую погоду (пример)"""
     try:
-        r = requests.get(
-            "https://api.open-meteo.com/v1/forecast?latitude=47.01&longitude=28.86&current_weather=true"
+        passenger = get_passenger_interest()
+        heatmap += (
+            "\n🚐 Пассажироперевозки (Молдова):\n"
+            f"Объявлений: {passenger['total_ads']}\n"
+            f"Свежие: {passenger['fresh_ads']}\n"
+            f"Просмотры: {passenger['views']}\n"
+            f"Интерес: 🔥 {passenger['interest_score']}\n"
         )
-        data = r.json()
-        temp = data['current_weather']['temperature']
-        condition = data['current_weather']['weathercode']
-        return f"{temp}°C, код погоды: {condition}"
-    except:
-        return "нет данных о погоде"
-
-def get_day_info():
-    """Возвращает день недели и дату"""
-    today = datetime.datetime.now()
-    weekday = today.strftime("%A")
-    date = today.strftime("%Y-%m-%d")
-    return weekday, date
-
-# ===== Команды бота =====
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "Привет! Я AI-ассистент по маркетплейсам.\n"
-        "Спроси меня о трендах товаров, и я дам рекомендации с тепловой картой."
-    )
-
-def help_command(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "Просто напиши вопрос вроде:\n"
-        "'Какие товары лучше всего продавать на 999.md в Молдове сегодня?'\n"
-        "Я учту день недели, погоду, праздники и дам рекомендации."
-    )
-
-def handle_message(update: Update, context: CallbackContext):
-    user_text = update.message.text
-    weekday, date = get_day_info()
-    weather = get_weather()
-    
-    prompt = (
-        f"Ты профессиональный аналитик маркетплейсов.\n"
-        f"Сегодня {date}, {weekday}, погода: {weather}.\n"
-        f"Пользователь спрашивает: {user_text}\n"
-        "Составь тепловую карту теоретически хороших для продажи товаров "
-        "на день, неделю и месяц, учитывая маркетплейс, страну, праздники и все тренды.\n"
-        "Предоставь рекомендации по товарам, категориям и оптимальным ценам."
-    )
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
-        answer = response['choices'][0]['message']['content']
-        update.message.reply_text(answer)
     except Exception as e:
-        update.message.reply_text(f"Ошибка при генерации: {e}")
+        heatmap += "\n🚐 Пассажироперевозки: данные временно недоступны\n"
 
-# ===== Основной запуск бота =====
-def main():
-    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    
-    print("Бот запущен...")
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+    return heatmap
