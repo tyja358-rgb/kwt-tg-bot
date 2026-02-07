@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from openai import OpenAI
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import holidays
 
 # ====== Загрузка .env ======
@@ -52,7 +52,6 @@ def demand_emoji(temp):
 
 # ====== AI логика с памятью ======
 def ask_ai(prompt: str, user_id: str) -> str:
-    # добавляем память пользователя
     if user_id not in memory:
         memory[user_id] = []
     memory[user_id].append(prompt)
@@ -75,7 +74,7 @@ def ask_ai(prompt: str, user_id: str) -> str:
     )
     answer = response.choices[0].message.content
     memory[user_id].append(answer)
-    save_memory()  # сохраняем память после каждого запроса
+    save_memory()
     return answer
 
 # ====== Текстовая тепловая карта ======
@@ -92,9 +91,7 @@ def generate_heatmap():
     heatmap += f"💄 Красота: {emoji} Увлажнение, ⚡ Парфюмерия, ❄ Летняя косметика\n"
     heatmap += f"🥦 Продукты: {emoji} Зимние фрукты, ⚡ Замороженные, ❄ Свежие овощи\n"
 
-    # ====== Пассажироперевозки ======
     try:
-        from analytics.passenger_interest import get_passenger_interest
         passenger = get_passenger_interest()
         if passenger.get("total_ads", 0) == 0:
             raise ValueError("Данные недоступны")
@@ -110,6 +107,33 @@ def generate_heatmap():
 
     return heatmap
 
+# ====== Google Calendar ======
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+
+SERVICE_ACCOUNT_FILE = 'google_keys/aetherium-486700-61a4b74e3f1c.json'
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+CALENDAR_ID = 'primary'
+
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+calendar_service = build('calendar', 'v3', credentials=credentials)
+
+def add_calendar_event(summary: str, description: str, start_in_minutes: int = 1, duration_minutes: int = 60):
+    start_time = datetime.now(timezone.utc) + timedelta(minutes=start_in_minutes)
+    end_time = start_time + timedelta(minutes=duration_minutes)
+
+    event = {
+        'summary': summary,
+        'description': description,
+        'start': {'dateTime': start_time.isoformat(), 'timeZone': 'Europe/Chisinau'},
+        'end': {'dateTime': end_time.isoformat(), 'timeZone': 'Europe/Chisinau'},
+    }
+
+    created_event = calendar_service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+    return f"Событие создано: {created_event.get('htmlLink')}"
+
 # ====== Telegram handlers ======
 def start(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -117,7 +141,8 @@ def start(update: Update, context: CallbackContext):
         "Спроси меня о товарах или используй команды:\n"
         "/today - спрос на сегодня\n"
         "/week - спрос на неделю\n"
-        "/month - спрос на месяц"
+        "/month - спрос на месяц\n"
+        "/addevent Название | Описание - добавить событие в календарь"
     )
 
 def handle_message(update: Update, context: CallbackContext):
@@ -136,7 +161,6 @@ def handle_message(update: Update, context: CallbackContext):
             f"Погода: {temp}°C, {weather_desc}\n"
             f"{'Праздник!' if holiday_today else ''}"
         )
-        # остальной код...
 
         prompt = f"{extra_info}\nВопрос: {user_text}"
         answer = ask_ai(prompt, user_id)
@@ -153,6 +177,18 @@ def week(update: Update, context: CallbackContext):
 def month(update: Update, context: CallbackContext):
     update.message.reply_text(generate_heatmap())
 
+def addevent(update: Update, context: CallbackContext):
+    try:
+        args = update.message.text.split(" ", 1)
+        if len(args) < 2 or "|" not in args[1]:
+            update.message.reply_text("Использование: /addevent Название | Описание")
+            return
+        summary, description = map(str.strip, args[1].split("|", 1))
+        link = add_calendar_event(summary, description)
+        update.message.reply_text(link)
+    except Exception as e:
+        update.message.reply_text(f"Ошибка при добавлении события: {e}")
+
 # ====== Запуск бота ======
 def main():
     updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
@@ -162,6 +198,7 @@ def main():
     dp.add_handler(CommandHandler("today", today))
     dp.add_handler(CommandHandler("week", week))
     dp.add_handler(CommandHandler("month", month))
+    dp.add_handler(CommandHandler("addevent", addevent))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     updater.start_polling()
