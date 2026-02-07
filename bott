@@ -1,52 +1,172 @@
-# bots/personal_bot/bot.py
-from openai import OpenAI
 import os
-from .auto_edit import replace_programmer_block
-from .memory_handler import load_memory, save_memory
+import json
+import requests
+from analytics.passenger_interest import get_passenger_interest
+from dotenv import load_dotenv
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from openai import OpenAI
+from datetime import datetime
+import holidays
 
-# Загружаем память при старте
-memory = load_memory()
+# ====== Загрузка .env ======
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-def handle_request(user_text, role=None):
-    """
-    role: "user", "programmer" или None
-    """
-    OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-    if not OPENAI_KEY:
-        return "Ошибка: OPENAI_API_KEY не задан!"
-    client = OpenAI(api_key=OPENAI_KEY)
+# ====== OpenAI client ======
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-    # Команда для обновления правил программиста
-    if "обнови правила программиста" in user_text.lower():
-        # Пример: пользователь пишет "обнови правила программиста: ..."
-        new_msg = user_text.split(":", 1)[-1].strip()
-        memory["programmer_system_msg"] = new_msg
-        save_memory(memory)
-        return "Правила программиста обновлены ✅"
+# ====== Настройки памяти бота ======
+MEMORY_FILE = "memory/memory.json"
+if not os.path.exists("memory"):
+    os.makedirs("memory")
 
-    # Команда для автоматической замены блока programmer
-    if "замени блок programmer на красиво отформатированный" in user_text.lower():
-        file_path = os.path.join(os.path.dirname(__file__), "bot.py")
-        return replace_programmer_block(file_path)
+if os.path.exists(MEMORY_FILE):
+    with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+        memory = json.load(f)
+else:
+    memory = {}
 
-    # Автоопределение роли
-    if role is None:
-        code_triggers = ["функция", "код", "python", "пример", "скрипт", "программа"]
-        if any(word.lower() in user_text.lower() for word in code_triggers):
-            role = "programmer"
-        else:
-            role = "user"
+def save_memory():
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(memory, f, ensure_ascii=False, indent=2)
 
-    # Используем системное сообщение из памяти
-    system_msg = memory["programmer_system_msg"] if role == "programmer" else memory["user_system_msg"]
+# ====== Погода ======
+def get_weather(city="Chisinau"):
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=ru"
+    resp = requests.get(url).json()
+    temp = resp["main"]["temp"]
+    desc = resp["weather"][0]["description"]
+    return temp, desc
 
-    resp = client.chat.completions.create(
+# ====== Эмодзи спроса ======
+def demand_emoji(temp):
+    if temp <= 0:
+        return "❄"
+    elif 1 <= temp <= 15:
+        return "⚡"
+    else:
+        return "🔥"
+
+# ====== AI логика с памятью ======
+def ask_ai(prompt: str, user_id: str) -> str:
+    # добавляем память пользователя
+    if user_id not in memory:
+        memory[user_id] = []
+    memory[user_id].append(prompt)
+
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": user_text}
+            {
+                "role": "system",
+                "content": (
+                    "Ты профессиональный аналитик маркетплейсов. "
+                    "Ты анализируешь рынок, сезон, день недели, погоду, праздники, "
+                    "экономику и поведение покупателей. "
+                    "Ты даёшь рекомендации товаров и тепловую карту спроса на день, неделю и месяц."
+                )
+            },
+            {"role": "user", "content": prompt}
         ],
         temperature=0.7
     )
+    answer = response.choices[0].message.content
+    memory[user_id].append(answer)
+    save_memory()  # сохраняем память после каждого запроса
+    return answer
 
-    return resp.choices[0].message.content
+# ====== Текстовая тепловая карта ======
+def generate_heatmap():
+    temp, weather_desc = get_weather()
+    emoji = demand_emoji(temp)
+
+    heatmap = f"🌡 Погода в Кишинёве: {temp:.1f}°C, {weather_desc}\n\n"
+    heatmap += "🔥⚡❄ Тепловая карта спроса:\n\n"
+    heatmap += f"👗 Одежда и обувь: {emoji} Зимняя одежда, ⚡ Спортивная, ❄ Летняя\n"
+    heatmap += f"📱 Электроника: {emoji} Смартфоны, ⚡ Наушники, ❄ Компьютеры\n"
+    heatmap += f"🏠 Товары для дома: {emoji} Обогреватели, ⚡ Постель, ❄ Кухня\n"
+    heatmap += f"🏋️ Спорт: {emoji} Зимние виды спорта, ⚡ Спортивная обувь, ❄ Велосипеды\n"
+    heatmap += f"💄 Красота: {emoji} Увлажнение, ⚡ Парфюмерия, ❄ Летняя косметика\n"
+    heatmap += f"🥦 Продукты: {emoji} Зимние фрукты, ⚡ Замороженные, ❄ Свежие овощи\n"
+
+    # ====== Пассажироперевозки ======
+    try:
+        from analytics.passenger_interest import get_passenger_interest
+        passenger = get_passenger_interest()
+        if passenger.get("total_ads", 0) == 0:
+            raise ValueError("Данные недоступны")
+        heatmap += (
+            "\n🚐 Пассажироперевозки (Молдова):\n"
+            f"Объявлений: {passenger['total_ads']}\n"
+            f"Свежие: {passenger['fresh_ads']}\n"
+            f"Просмотры: {passenger['views']}\n"
+            f"Интерес: 🔥 {passenger['interest_score']}\n"
+        )
+    except Exception:
+        heatmap += "\n🚐 Пассажироперевозки: данные временно недоступны\n"
+
+    return heatmap
+
+# ====== Telegram handlers ======
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Привет! Я AI-ассистент по маркетплейсам.\n"
+        "Спроси меня о товарах или используй команды:\n"
+        "/today - спрос на сегодня\n"
+        "/week - спрос на неделю\n"
+        "/month - спрос на месяц"
+    )
+
+def handle_message(update: Update, context: CallbackContext):
+    user_text = update.message.text
+    user_id = str(update.message.from_user.id)
+
+    try:
+        today_date = datetime.now()
+        day_of_week = today_date.strftime("%A")
+        year = today_date.year
+        md_holidays = holidays.Moldova(years=year)
+        holiday_today = today_date in md_holidays
+        temp, weather_desc = get_weather()
+        extra_info = (
+            f"Сегодня: {today_date.strftime('%d.%m.%Y')} ({day_of_week})\n"
+            f"Погода: {temp}°C, {weather_desc}\n"
+            f"{'Праздник!' if holiday_today else ''}"
+        )
+        # остальной код...
+
+        prompt = f"{extra_info}\nВопрос: {user_text}"
+        answer = ask_ai(prompt, user_id)
+        update.message.reply_text(answer)
+    except Exception as e:
+        update.message.reply_text(f"Ошибка при генерации: {e}")
+
+def today(update: Update, context: CallbackContext):
+    update.message.reply_text(generate_heatmap())
+
+def week(update: Update, context: CallbackContext):
+    update.message.reply_text(generate_heatmap())
+
+def month(update: Update, context: CallbackContext):
+    update.message.reply_text(generate_heatmap())
+
+# ====== Запуск бота ======
+def main():
+    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("today", today))
+    dp.add_handler(CommandHandler("week", week))
+    dp.add_handler(CommandHandler("month", month))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+    updater.start_polling()
+    print("🤖 Бот запущен")
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
