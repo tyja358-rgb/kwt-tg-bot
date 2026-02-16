@@ -1,166 +1,61 @@
-3077942:~# cat ~/project/parser.py
-import asyncio
-import sqlite3
+import os
 import re
-from io import BytesIO
-from PIL import Image
-import aiohttp
-from playwright.async_api import async_playwright
-from bot import send_photo_message, save_listing_message, delete_listing_message
-BASE_URL = "https://999.md"
-LISTINGS_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?o_16_1=912&srsltid=AfmBOorv5ER7Q6Ao6FG3bp3Aoi3oKtCamq9Vqi0AXgOAoN3cqsNpp_4M"
-DB_PATH = "/root/project/database.db"
-# ==========================
-# Получение деталей объявления: телефон и фото
-# ==========================
-async def fetch_listing_details(context, link):
-    page = await context.new_page()
-    await page.goto(link, wait_until="networkidle")
-    phone = "Не указан"
-    img_urls = []
-    try:
-        # Кнопка показать номер
-        show_number = await page.query_selector("button[data-testid='show-phone']")
-        if show_number:
-            await show_number.click()
-            await page.wait_for_timeout(1000)
-        # Телефон
-        phone_el = await page.query_selector("div[data-sentry-component='PhoneNumberDetails']")
-        if phone_el:
-            spans = await phone_el.query_selector_all("span")
-            phone_parts = []
-            for sp in spans:
-                text = (await sp.inner_text()).replace("\xa0","").strip()
-                if text:
-                    phone_parts.append(text)
-            phone = "".join(phone_parts)
-        # Фото
-        imgs = await page.query_selector_all("div.carousel img")
-        for img in imgs:
-            src = await img.get_attribute("src")
-            if src:
-                img_urls.append(src)
-    except Exception as e:
-        print("Ошибка fetch_listing_details:", e)
-    await page.close()
-    return phone, img_urls
-# ==========================
-# Создание коллажа из фото
-# ==========================
-async def make_collage(img_urls):
-    if not img_urls:
-        return None
-    images = []
-    async with aiohttp.ClientSession() as session:
-        for url in img_urls[:4]:
-            async with session.get(url) as resp:
-                data = await resp.read()
-                images.append(Image.open(BytesIO(data)))
-    w,h = images[0].size
-    collage = Image.new('RGB', (w*2,h*2),(255,255,255))
-    positions = [(0,0),(w,0),(0,h),(w,h)]
-    for i,img in enumerate(images):
-        collage.paste(img.resize((w,h)), positions[i])
-    output = BytesIO()
-    collage.save(output, format='JPEG')
-    output.seek(0)
-    return output
-# ==========================
-# Получение новых объявлений
-# ==========================
-async def fetch_new_listings():
-    listings = []
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
-        await page.goto(LISTINGS_URL, wait_until="networkidle")
-        # Игнорируем booster (продажа)
-        ads = await page.query_selector_all("div.AdPhoto_wrapper__gAOIH:not(.booster)")
-        if not ads:
-            print("Объявления не найдены")
-            await browser.close()
-            return []
-        for ad in ads:
-            try:
-                link_tag = await ad.query_selector("a.AdPhoto_info__link__OwhY6")
-                if not link_tag:
-                    continue
-                link = await link_tag.get_attribute("href")
-                if link.startswith("/"):
-                    link = BASE_URL + link
-                title = (await link_tag.inner_text()).strip()
-                # Цена в евро
-                price_tag = await ad.query_selector("span.AdPrice_price__2L3eA")                if not price_tag:
-                    continue
-                price_text = (await price_tag.inner_text()).strip().replace("€","").replace(" ","")
-                try:
-                    price = float(price_text)
-                except ValueError:
-                    print(f"Пропущено объявление с некорректной ценой: {price_text}")
-                    continue
-                # Комнаты и район
-                rooms_match = re.search(r"(\d+)", title)
-                rooms = int(rooms_match.group(1)) if rooms_match else 0
-                district_parts = title.split(",")
-                district = district_parts[1].strip() if len(district_parts) > 1
-else "Не указано"
-                # Детали
-                phone, img_urls = await fetch_listing_details(context, link)
-                collage = await make_collage(img_urls)
-                listings.append({
-                    "id": link,
-                    "district": district,
-                    "rooms": rooms,
-                    "price": price,
-                    "phone": phone,
-                    "collage": collage
-                })
-            except Exception as e:
-                print("Ошибка при разборе объявления:", e)
-        await browser.close()
-    return listings
-# ==========================
-# Основной парсинг и отправка сообщений
-# ==========================
-async def parse_site():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id FROM listings")
-    existing_ids = set(row[0] for row in c.fetchall())
-    new_listings = await fetch_new_listings()
-    for listing in new_listings:
-        if listing["id"] not in existing_ids:
-            c.execute(
-                "INSERT INTO listings (id, district, rooms, price, phone, collage) VALUES (?,?,?,?,?,?)",
-                (
-                    listing["id"],
-                    listing["district"],
-                    listing["rooms"],
-                    listing["price"],
-                    listing["phone"],
-                    listing["collage"].getvalue() if listing["collage"] else None
-                )
-            )
-            conn.commit()
-            text = f"{listing['district']}, {listing['rooms']} комнаты\n{listing['price']}$\nТелефон: {listing['phone']}"
-            message_id = await send_photo_message(listing['collage'], text)
-            save_listing_message(listing["id"], message_id)
-    # Удаляем пропавшие
-    c.execute("SELECT id FROM listings")
-    all_ids = set(row[0] for row in c.fetchall())
-    current_ids = set(listing["id"] for listing in new_listings)
-    removed_ids = all_ids - current_ids
-    for old_id in removed_ids:
-        await delete_listing_message(old_id)
-        c.execute("DELETE FROM listings WHERE id=?", (old_id,))
-        conn.commit()
-    conn.close()
-async def main():
-    print("Старт парсера...")
-    await parse_site()
-    print("Парсер завершил работу")
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bot_sender import send_message
+BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?o_16_1=912"
+def load_sent_links():
+    if not os.path.exists("sent_links.txt"):
+        return set()
+    with open("sent_links.txt", "r") as f:
+        return set(f.read().splitlines())
+def save_sent_link(link):
+    with open("sent_links.txt", "a") as f:
+        f.write(link + "\n")
+def create_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+def run_parser():
+    sent_links = load_sent_links()
+    driver = create_driver()
+    driver.get(BASE_URL)
+    wait = WebDriverWait(driver, 20)
+    # Ждём загрузки карточек объявлений
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href^='/ru/']")))
+    # Прокрутка вниз чтобы прогрузились элементы
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(3)
+    links = driver.find_elements(By.CSS_SELECTOR, "a[href^='/ru/']")
+    new_links_found = False
+    for link in links:
+        href = link.get_attribute("href")
+        if not href:
+            continue
+        # Ищем строго объявления вида /ru/87410250
+        match = re.match(r"https://999\.md/ru/(\d+)$", href)
+        if match:
+            if href not in sent_links:
+                print("Новая ссылка:", href)
+                send_message(href)
+                save_sent_link(href)
+                new_links_found = True
+                time.sleep(1)
+    driver.quit()
+    if not new_links_found:
+        print("Новых объявлений нет")
 if __name__ == "__main__":
-    asyncio.run(main())
-[2]+  Exit 1                  nohup python3 ~/project/parser.py > ~/project/parser.log 2>&1
-(venv) root@vmi3077942:~#
+    while True:
+        print("Запуск парсинга...")
+        run_parser()
+        print("Ждём 2 часа...")
+        time.sleep(7200)
+(venv) root@vmi3077942:~/project/parser_project#
