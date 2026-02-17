@@ -1,30 +1,98 @@
-def generate_heatmap():
-    temp, weather_desc = get_weather()
-    emoji = demand_emoji(temp)
-
-    heatmap = f"🌡 Погода в Кишинёве: {temp:.1f}°C, {weather_desc}\n\n"
-    heatmap += "🔥⚡❄ Тепловая карта спроса:\n\n"
-    heatmap += f"👗 Одежда и обувь: {emoji} Зимняя одежда, ⚡ Спортивная, ❄ Летняя\n"
-    heatmap += f"📱 Электроника: {emoji} Смартфоны, ⚡ Наушники, ❄ Компьютеры\n"
-    heatmap += f"🏠 Товары для дома: {emoji} Обогреватели, ⚡ Постель, ❄ Кухня\n"
-    heatmap += f"🏋️ Спорт: {emoji} Зимние виды спорта, ⚡ Спортивная обувь, ❄ Велосипеды\n"
-    heatmap += f"💄 Красота: {emoji} Увлажнение, ⚡ Парфюмерия, ❄ Летняя косметика\n"
-    heatmap += f"🥦 Продукты: {emoji} Зимние фрукты, ⚡ Замороженные, ❄ Свежие овощи\n"
-
-    # ====== Пассажироперевозки ======
+942:~/project/parser_project# cat parser.py
+import os
+import re
+import time
+import random
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bot_sender import send_message
+BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?o_16_1=912"
+def load_sent_links():
+    if not os.path.exists("sent_links.txt"):
+        return set()
+    with open("sent_links.txt", "r") as f:
+        return set(f.read().splitlines())
+def save_sent_link(link):
+    with open("sent_links.txt", "a") as f:
+        f.write(link + "\n")
+def create_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+def parse_realist(driver, sent_links):
+    """Парсинг сайта realist.md"""
+    # Закрываем баннер cookie
     try:
-        from analytics.passenger_interest import get_passenger_interest
-        passenger = get_passenger_interest()
-        if passenger.get("total_ads", 0) == 0:
-            raise ValueError("Данные недоступны")
-        heatmap += (
-            "\n🚐 Пассажироперевозки (Молдова):\n"
-            f"Объявлений: {passenger['total_ads']}\n"
-            f"Свежие: {passenger['fresh_ads']}\n"
-            f"Просмотры: {passenger['views']}\n"
-            f"Интерес: 🔥 {passenger['interest_score']}\n"
+        reject_btn = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[text()='Resping tot']"))
         )
-    except Exception:
-        heatmap += "\n🚐 Пассажироперевозки: данные временно недоступны\n"
-
-    return heatmap
+        reject_btn.click()
+        time.sleep(2)
+    except:
+        pass
+    wait = WebDriverWait(driver, 10)
+    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[href*='-cp']")))
+    links = driver.find_elements(By.CSS_SELECTOR, "a[href*='-cp']")
+    new_links_found = False
+    for link in links:
+        href = link.get_attribute("href")
+        if not href:
+            continue
+        # Проверяем realist.md ссылки
+        match = re.search(r"https://www\.realist\.md/.+-cp(\d+)/?$", href)
+        if match and href not in sent_links:
+            print("Новая ссылка:", href)
+            send_message(href)
+            save_sent_link(href)
+            sent_links.add(href)
+            new_links_found = True
+            time.sleep(random.randint(3, 9))
+    if not new_links_found:
+        print("Новых объявлений с realist.md нет")
+def parse_999md(driver, sent_links):
+    """Парсинг сайта 999.md"""
+    driver.get(BASE_URL)
+    wait = WebDriverWait(driver, 20)
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href^='/ru/']")))
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(random.randint(3, 5))
+    links = driver.find_elements(By.CSS_SELECTOR, "a[href^='/ru/']")
+    new_links_found = False
+    for link in links:
+        href = link.get_attribute("href")
+        if not href:
+            continue
+        match = re.match(r"https://999\.md/ru/(\d+)$", href)
+        if match and href not in sent_links:
+            print("Новая ссылка:", href)
+            send_message(href)
+            save_sent_link(href)
+            sent_links.add(href)
+            new_links_found = True
+            time.sleep(random.randint(3, 9))
+    if not new_links_found:
+        print("Новых объявлений на 999.md нет")
+def run_parser():
+    sent_links = load_sent_links()
+    driver = create_driver()
+    # Парсим 999.md
+    parse_999md(driver, sent_links)
+    # Парсим realist.md
+    driver.get("https://www.realist.md/ro/apartamente-de-inchiriat")
+    parse_realist(driver, sent_links)
+    driver.quit()
+if __name__ == "__main__":
+    while True:
+        print("Запуск парсинга...")
+        run_parser()
+        print("Ждём 2 часа...")
+        time.sleep(7200)
+(venv) root@vmi3077942:~/project/parser_project#
